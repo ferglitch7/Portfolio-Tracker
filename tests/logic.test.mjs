@@ -22,6 +22,20 @@ const { plan, suggest } = await import('../js/targets.js');
 
 const close = (a, b, eps = 1e-6) => assert.ok(Math.abs(a - b) < eps, `${a} ≉ ${b}`);
 
+test('number style: dot for thousands by default, switchable', () => {
+  assert.equal(F.money(1234.5, 'USD'), '$1.234,50');
+  assert.equal(F.money(1000, 'USD'), '$1.000,00');
+  assert.equal(F.qty(1500), '1.500');
+  assert.equal(F.pct(0.0234), '+2,34%');
+  assert.equal(F.parseNumber('1.250,5'), 1250.5);
+  assert.equal(F.parseNumber('0,5'), 0.5);
+  assert.equal(F.parseNumber('52.000'), 52000);
+  F.setNumberStyle('comma');
+  assert.equal(F.money(1234.5, 'USD'), '$1,234.50');
+  assert.equal(F.parseNumber('52,000'), 52000);
+  F.setNumberStyle('dot');
+});
+
 test('parseNumber follows the locale for a lone separator', () => {
   assert.equal(F.parseNumber('0,5', 'es-MX'), 0.5);
   assert.equal(F.parseNumber('0.5', 'es-ES'), 0.5);
@@ -67,7 +81,7 @@ test('copies carry positions and preferences but no API keys', () => {
   assert.ok(!text.includes('secret-1') && !text.includes('secret-2'));
   const doc = JSON.parse(text);
   assert.ok(Array.isArray(doc.holdings) && Array.isArray(doc.snapshots));
-  assert.deepEqual(Object.keys(doc.settings).sort(), ['ccy', 'targets', 'unit']);
+  assert.deepEqual(Object.keys(doc.settings).sort(), ['ccy', 'goal', 'numbers', 'order', 'targets', 'unit']);
 });
 
 const now = 1_800_000_000_000, HOUR = 3600e3, DAY = 86400e3;

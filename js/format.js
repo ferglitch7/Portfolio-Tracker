@@ -1,7 +1,26 @@
 // Number, money and date formatting. Everything is priced in USD internally and
 // converted to the display currency at render time.
 
+// Dates follow the device language; numbers follow the chosen style.
 const LOCALE = (typeof navigator !== 'undefined' && navigator.language) || 'es';
+
+// 'dot'   → $1.234,50  (dot for thousands, comma for decimals)
+// 'comma' → $1,234.50
+export const NUMBER_STYLES = { dot: 'es-CL', comma: 'en-US' };
+let NUM = NUMBER_STYLES.dot;
+
+export function setNumberStyle(style) {
+  const next = NUMBER_STYLES[style] || NUMBER_STYLES.dot;
+  if (next === NUM) return;
+  NUM = next;
+  cache.clear();
+}
+
+/** A plain number in the chosen style (no currency): 1.234,5. */
+export function num(v, maxDigits = 2) {
+  if (!Number.isFinite(v)) return '—';
+  return nf(`n:${maxDigits}`, { maximumFractionDigits: maxDigits }).format(v);
+}
 
 export const CURRENCIES = {
   USD: { name: 'Dólar', flag: 'us' },
@@ -39,7 +58,7 @@ export const CURRENCIES = {
 const cache = new Map();
 function nf(key, opts) {
   let f = cache.get(key);
-  if (!f) { f = new Intl.NumberFormat(LOCALE, opts); cache.set(key, f); }
+  if (!f) { f = new Intl.NumberFormat(NUM, opts); cache.set(key, f); }
   return f;
 }
 
@@ -144,7 +163,7 @@ function separators(locale) {
  * grouping mark counts as grouping only when the digits are grouped in threes
  * ("52,000"), otherwise it is taken as a decimal ("0,5").
  */
-export function parseNumber(str, locale = LOCALE) {
+export function parseNumber(str, locale = NUM) {
   if (typeof str !== 'string') return NaN;
   let s = str.trim().replace(/[\s\u00a0\u202f']/g, '');
   if (!s || !/^\d*(?:[.,]\d*)*$/.test(s) || !/\d/.test(s)) return NaN;

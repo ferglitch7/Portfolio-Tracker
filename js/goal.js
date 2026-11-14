@@ -33,7 +33,7 @@ function monthYear(d) {
 }
 
 function compact(v, ccy) {
-  return F.compactMoney(v, ccy).replace(/\.00(?=\D*$)/, '');
+  return F.compactMoney(v, ccy).replace(/[.,]00(?=\D*$)/, '');
 }
 
 // ---------- home card ------------------------------------------------------------
@@ -207,7 +207,7 @@ export function openGoal(getValuation) {
     const marks = milestones(draft.amount);
     marksEl.replaceChildren(...marks.map(m => h('span.goal-mark' + (now >= m ? '.on' : ''), null,
       now >= m ? h('span.goal-mark-check', { html: ICONS.check }) : null, compact(m, draft.ccy))));
-    rateLabel.textContent = `${(draft.rate * 100).toLocaleString(undefined, { maximumFractionDigits: 1 })} % al año`;
+    rateLabel.textContent = `${F.num(draft.rate * 100, 1)} % al año`;
   }
 
   nameInput.addEventListener('input', () => { draft.name = nameInput.value.trim() || DEFAULT.name; view.titleEl.textContent = draft.name; save(); });

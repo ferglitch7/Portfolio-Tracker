@@ -209,7 +209,6 @@ function renderHome() {
   renderGoalCard($('goal'), v);
   renderNotice();
   renderList(v);
-  renderMovers(v);
   renderPerf(v);
   if (!isDemo()) V.markSince(has);
 
@@ -278,6 +277,7 @@ function renderAlloc(v) {
   }
   tbar.hidden = !t;
   bar.classList.toggle('filtered', !!filter);
+  legend.classList.toggle('filtering', !!filter);
   $('btn-targets').classList.toggle('set', !!t);
 }
 
@@ -306,8 +306,8 @@ function renderNotice() {
 
 // ---- performance over 7 days, 30 days and a year ----------------------------
 
-const PERF = [['1S', '7 días'], ['1M', '30 días'], ['1A', '1 año']];
-let perfSel = '1M';
+const PERF = [['hoy', 'Hoy'], ['1S', '7 días'], ['1M', '30 días'], ['1A', '1 año']];
+let perfSel = 'hoy';
 const perfTiles = new Map();
 
 /**
@@ -318,6 +318,7 @@ function renderPerf(v) {
   const box = $('perf'), tilesEl = $('perf-tiles'), line = $('perf-line');
   const now = Date.now(), r = v.rate;
   const results = PERF.map(([range, label]) => {
+    if (range === 'hoy') return { range, label, ok: !!v.day, pct: v.day ? v.day.pct : 0, abs: v.day ? v.day.abs : 0 };
     const s = marketSeries({ range, span: H.RANGES[range].span, now, holdings: state.holdings, quoteOf: P.quoteOf, peek: H.peek, rate: r, unit: null });
     const first = s.pts[0][1], last = s.pts[s.pts.length - 1][1];
     return { range, label, ok: s.moved && first > 0, pct: first > 0 ? last / first - 1 : 0, abs: last - first };
@@ -341,10 +342,13 @@ function renderPerf(v) {
     t.disabled = !x.ok;
     t.setAttribute('aria-pressed', String(x.range === sel));
     t.children[1].textContent = x.ok ? F.pct(x.pct) : '—';
-    t.children[2].textContent = x.ok ? F.signedMoney(x.abs, ccy()) : '';
+    t.children[2].textContent = x.ok ? (x.abs < 0 ? '−' : x.abs > 0 ? '+' : '') + F.wholeMoney(Math.abs(x.abs), ccy()) : '';
   }
 
-  // Best and worst asset over the selected period, by their own price change.
+  // Today: which assets moved the balance. Other periods: the best and worst asset.
+  const showMovers = sel === 'hoy' && renderMovers(v) >= 1;
+  $('movers-rows').hidden = !showMovers;
+  if (sel === 'hoy') { line.hidden = true; return; }
   const span = H.RANGES[sel].span;
   const moves = [];
   for (const a of state.holdings) {
@@ -361,13 +365,11 @@ function renderPerf(v) {
   line.hidden = !moves.length;
 }
 
-/** Each asset's share of today's change, largest first. */
+/** Each asset's share of today's change, largest first. Returns how many. */
 function renderMovers(v) {
-  const box = $('movers'), rows = $('movers-rows');
-  const list = v.rows.filter(r => r.dayAbs != null && Math.abs(r.dayAbs) >= 0.01).sort((a, b) => Math.abs(b.dayAbs) - Math.abs(a.dayAbs)).slice(0, 5);
-  box.hidden = list.length < 2;
-  if (box.hidden) return;
-  box.classList.toggle('masked', state.settings.hidden);
+  const rows = $('movers-rows');
+  const list = v.rows.filter(r => r.dayAbs != null && Math.abs(r.dayAbs) >= 0.01).sort((a, b) => Math.abs(b.dayAbs) - Math.abs(a.dayAbs)).slice(0, 4);
+  if (!list.length) return 0;
   const max = Math.abs(list[0].dayAbs);
   // Bars grow from a centre line only when some assets rose and others fell.
   const mixed = list.some(r => r.dayAbs > 0) && list.some(r => r.dayAbs < 0);
@@ -382,6 +384,7 @@ function renderMovers(v) {
       h('span.mover-track', null, h('i' + (up ? '.up' : '.down'), { style })),
       h('span.mover-amt' + (up ? '.up' : '.down'), { text: F.signedMoney(r.dayAbs, ccy()) }));
   }));
+  return list.length;
 }
 
 function slideRow(row, to, velocity = 0) {
@@ -395,6 +398,129 @@ function setRowX(row, x) {
 }
 function closeOpenRow(except) {
   if (openRow && openRow !== except) { slideRow(openRow, 0); openRow = null; }
+}
+
+// ---- drag to reorder ---------------------------------------------------------
+// Hold a row for a moment, then move it up or down; the others make room.
+
+const HOLD_MS = 420;
+let drag = null, press = null, dragClickBlock = 0;
+
+function cancelPress() {
+  if (press) { clearTimeout(press.timer); press = null; }
+}
+
+function beginDrag(row, y) {
+  press = null;
+  if (filter || drag) return;
+  const list = $('list');
+  const els = [...list.children];
+  const index = els.indexOf(row.el);
+  if (index < 0 || els.length < 2) return;
+  closeOpenRow();
+  const scroller = $('scroll');
+  drag = {
+    row, list, scroller, index, target: index, startY: y, lastY: y, startScroll: scroller.scrollTop,
+    h: row.el.offsetHeight,
+    items: els.map(el => { const r = el.getBoundingClientRect(); return { el, top: r.top + scroller.scrollTop, h: r.height }; }),
+    raf: 0,
+  };
+  haptic(15);
+  list.classList.add('reordering');
+  row.el.classList.add('lifted');
+  dragClickBlock = Infinity;
+  autoScroll();
+}
+
+function moveDrag(y) {
+  if (!drag) return;
+  drag.lastY = y;
+  layoutDrag();
+}
+
+function layoutDrag() {
+  const d = drag;
+  const dy = d.lastY - d.startY + (d.scroller.scrollTop - d.startScroll);
+  d.row.el.style.transform = `translate3d(0,${dy}px,0) scale(1.02)`;
+  const self = d.items[d.index];
+  const centre = self.top + self.h / 2 + dy;
+  let t = 0;
+  d.items.forEach((it, j) => { if (j !== d.index && centre > it.top + it.h / 2) t++; });
+  if (t !== d.target) { d.target = t; haptic(5); }
+  d.items.forEach((it, j) => {
+    if (j === d.index) return;
+    let shift = 0;
+    if (d.index < t && j > d.index && j <= t) shift = -d.h;
+    else if (t < d.index && j >= t && j < d.index) shift = d.h;
+    it.el.style.transform = shift ? `translate3d(0,${shift}px,0)` : '';
+  });
+}
+
+// Near the top or bottom edge the page scrolls along with the finger.
+function autoScroll() {
+  if (!drag) return;
+  const { scroller, lastY } = drag;
+  const edge = 90, vh = scroller.clientHeight;
+  const speed = lastY < edge ? -(edge - lastY) / 6 : lastY > vh - edge ? (lastY - (vh - edge)) / 6 : 0;
+  if (speed) { scroller.scrollTop += speed; layoutDrag(); }
+  drag.raf = requestAnimationFrame(autoScroll);
+}
+
+function endDrag() {
+  const d = drag;
+  if (!d) return;
+  drag = null;
+  cancelAnimationFrame(d.raf);
+  const ids = d.items.map(it => [...rowMap].find(([, r]) => r.el === it.el)[0]);
+  const [moved] = ids.splice(d.index, 1);
+  ids.splice(d.target, 0, moved);
+
+  // Put the DOM in the new order right away, then glide the row into its slot.
+  const from = d.row.el.getBoundingClientRect().top;
+  d.items.forEach(it => { it.el.style.transform = ''; });
+  d.list.classList.remove('reordering');
+  d.row.el.classList.remove('lifted');
+  ids.forEach(id => d.list.append(rowMap.get(id).el));
+  const to = d.row.el.getBoundingClientRect().top;
+  if (!reduceMotion() && Math.abs(from - to) > 1) {
+    d.row.el.animate([{ transform: `translateY(${from - to}px) scale(1.02)` }, { transform: 'none' }], { duration: 260, easing: EASE });
+  }
+  dragClickBlock = performance.now() + 350;
+  haptic(10);
+  if (d.target !== d.index) {
+    // Hidden rows (a class filter is never active while dragging) keep their place.
+    setSetting('order', ids);
+  }
+}
+
+function reorderable(row) {
+  const main = row.main;
+  const start = (x, y) => {
+    if (filter || drag) return;
+    cancelPress();
+    press = { x, y, timer: setTimeout(() => beginDrag(row, y), HOLD_MS) };
+  };
+  const move = (x, y, ev) => {
+    if (drag && drag.row === row) { if (ev.cancelable) ev.preventDefault(); moveDrag(y); return; }
+    if (press && (Math.abs(x - press.x) > 8 || Math.abs(y - press.y) > 8)) cancelPress();
+  };
+  const end = () => { cancelPress(); if (drag && drag.row === row) endDrag(); };
+
+  main.addEventListener('touchstart', e => { if (e.touches.length === 1) start(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
+  main.addEventListener('touchmove', e => move(e.touches[0].clientX, e.touches[0].clientY, e), { passive: false });
+  main.addEventListener('touchend', end);
+  main.addEventListener('touchcancel', end);
+  main.addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    start(e.clientX, e.clientY);
+    const mm = ev => move(ev.clientX, ev.clientY, ev);
+    const mu = () => { removeEventListener('mousemove', mm); removeEventListener('mouseup', mu); end(); };
+    addEventListener('mousemove', mm);
+    addEventListener('mouseup', mu);
+  });
+  main.addEventListener('contextmenu', e => e.preventDefault());
+  // A long press or a drag must not also open the asset.
+  main.addEventListener('click', e => { if (performance.now() < dragClickBlock) { e.stopImmediatePropagation(); e.preventDefault(); } }, true);
 }
 
 function createRow(a) {
@@ -417,8 +543,11 @@ function createRow(a) {
   edit.addEventListener('click', () => { slideRow(row, 0); openRow = null; openDetail(a.id, { edit: true }); });
   del.addEventListener('click', () => deleteHolding(a.id));
 
+  reorderable(row);
+
   pan(main, {
     axis: 'x',
+    shouldBegin: () => !drag,
     onStart: () => { closeOpenRow(row); if (row.anim) row.anim.stop(); row.base = row.x; row.w = el.offsetWidth; },
     onMove: d => {
       let x = row.base + d;
@@ -436,9 +565,17 @@ function createRow(a) {
   return row;
 }
 
+/** Rows in the user's order when they arranged one (new assets go last), else by value. */
+function arranged(rows) {
+  const order = state.settings.order;
+  if (!Array.isArray(order) || !order.length) return rows;
+  const pos = new Map(order.map((id, i) => [id, i]));
+  return rows.map((r, i) => [r, pos.has(r.a.id) ? pos.get(r.a.id) : order.length + i]).sort((x, y) => x[1] - y[1]).map(x => x[0]);
+}
+
 function renderList(v) {
   const list = $('list');
-  const rows = filter ? v.rows.filter(r => r.a.kind === filter) : v.rows;
+  const rows = arranged(filter ? v.rows.filter(r => r.a.kind === filter) : v.rows);
 
   // FLIP: remember where each row is, reorder, then animate from the old place.
   const before = new Map();
@@ -628,7 +765,7 @@ function amountView(sheet, asset, { edit = false } = {}) {
   // The big number is exactly as wide as its text so the unit sits right after it.
   const fit = () => {
     const text = qtyInput.value || '0';
-    qtyInput.style.fontSize = text.length > 12 ? '30px' : text.length > 8 ? '40px' : '';
+    qtyInput.style.fontSize = text.length > 12 ? '28px' : text.length > 8 ? '38px' : '';
     const cs = getComputedStyle(qtyInput);
     if (!cs.fontSize) { qtyInput.style.width = `${text.length + 0.3}ch`; return; }
     meter.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
@@ -948,6 +1085,8 @@ function openSettings() {
   let sheet = null, wipeArmed = 0;
   const ccyValue = h('span', { text: ccy() });
   const hide = toggle(state.settings.hidden, on => setSetting('hidden', on), 'Ocultar importes');
+  const byValue = toggle(!state.settings.order, on => { if (on) setSetting('order', null); else byValue.set(true); }, 'Ordenar activos por valor');
+  const numbers = segmented([['dot', '1.234,50'], ['comma', '1,234.50']], state.settings.numbers || 'dot', s => setSetting('numbers', s));
 
   const fileInput = h('input', { type: 'file', accept: 'application/json,.json', hidden: true, id: 'set-import' });
   fileInput.addEventListener('change', async () => {
@@ -986,7 +1125,10 @@ function openSettings() {
     body: [
       h('div.group', null,
         fieldButton('Moneda', { value: ccyValue, chevron: true, onclick: () => sheet.push(currencyView(sheet)) }),
-        h('div.field', null, h('span.field-label', { text: 'Ocultar importes' }), h('span.field-value'), hide.el)),
+        h('div.field', null, h('span.field-label', { text: 'Ocultar importes' }), h('span.field-value'), hide.el),
+        h('div.field', null, h('span.field-label', { text: 'Ordenar por valor' }), h('span.field-value'), byValue.el),
+        h('div.field.numbers', null, h('span.field-label', { text: 'Números' }), h('span.field-value'), numbers.el)),
+      h('p.hint', { text: 'Para mover un activo, mantenlo pulsado y arrástralo. Al hacerlo, el orden por valor se desactiva.' }),
       h('div.group-title', { text: 'Acciones en vivo' }),
       h('div.group', null, keyField({
         id: 'set-key', placeholder: 'Llave de Finnhub', value: state.settings.finnhubKey,
@@ -1013,7 +1155,7 @@ function openSettings() {
       h('p.hint.version', { text: `Versión ${APP_VERSION}` }),
     ],
   });
-  view.onShow = () => { ccyValue.textContent = ccy(); hide.set(state.settings.hidden); };
+  view.onShow = () => { ccyValue.textContent = ccy(); hide.set(state.settings.hidden); byValue.set(!state.settings.order); };
   sheet = openSheet(view);
 }
 
@@ -1044,6 +1186,7 @@ function demoHoldings() {
 // ============================================================================
 
 function sync() {
+  F.setNumberStyle(state.settings.numbers);
   P.setFinnhubKey(state.settings.finnhubKey);
   H.setHistoryKey(state.settings.historyKey);
   const held = new Set(state.holdings.map(a => a.id));
