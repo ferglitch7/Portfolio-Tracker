@@ -554,6 +554,26 @@ button.field:active { background: var(--fill); }
 .switch[aria-checked="true"] { background: #34c759; }
 .switch[aria-checked="true"]::after { transform: translateX(20px); }
 
+/* ---- what moved the balance today ---- */
+.movers { display: flex; flex-direction: column; gap: 10px; }
+.section-title { font: 700 20px/1.2 var(--font-round); letter-spacing: -0.02em; padding: 0 4px; }
+.mover {
+  position: relative; display: grid; grid-template-columns: 28px minmax(0, 1fr) 30% auto; align-items: center; gap: 10px;
+  width: 100%; min-height: 50px; padding: 8px 16px; transition: background 0.2s;
+}
+.mover:active { background: color-mix(in srgb, var(--card) 88%, var(--label) 12%); }
+.mover + .mover::before { content: ""; position: absolute; top: 0; left: 54px; right: 0; height: 0.5px; background: var(--sep); }
+.mover-name { font-weight: 600; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mover-track { position: relative; height: 8px; border-radius: 4px; background: var(--fill); }
+.mover-track::after { content: ""; position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1px; background: var(--label-3); }
+.mover-track i { position: absolute; top: 0; bottom: 0; min-width: 4px; border-radius: 4px; transition: width 0.6s var(--ease); }
+.mover-track i.up { background: var(--up); }
+.mover-track i.down { background: var(--down); }
+.mover-amt { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; min-width: 74px; }
+.mover-amt.up { color: var(--up); }
+.mover-amt.down { color: var(--down); }
+.movers.masked .mover-amt { filter: blur(7px); opacity: 0.7; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
 }

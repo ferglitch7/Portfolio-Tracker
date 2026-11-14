@@ -68,10 +68,21 @@ uso.
 
 ## Datos
 
-Todo se guarda en `localStorage` del navegador donde la usas. Para guardarlo
-fuera o pasarlo a otro dispositivo: Ajustes → Exportar copia / Importar copia.
-Una copia contiene posiciones, preferencias, objetivo y el historial real;
-nunca las llaves.
+Todo se guarda solo y al instante en el navegador donde la usas, en tres capas:
+
+1. **Copia de trabajo** en `localStorage`.
+2. **Espejo en IndexedDB** (`js/vault.js`). Si la copia de trabajo se vacía o se
+   corrompe, la app la restaura sola al abrirse.
+3. **Versiones**: una por día (como empezó ese día) y una antes de cada
+   borrado, importación o restauración; se guardan las 20 más recientes.
+   Ajustes → Versiones guardadas.
+
+Las tres viven en el mismo almacenamiento: si borras la app de la pantalla de
+inicio se pierden. Para eso está Ajustes → **Guardar en Archivos** (en iPhone
+abre la hoja de compartir; "Guardar en Archivos" la deja en iCloud Drive). La
+app avisa a los 3 días de uso si nunca guardaste una copia, y luego cada 30
+días. Una copia contiene posiciones, preferencias, objetivo y el historial
+real; nunca las llaves. Se recupera con Ajustes → Importar copia.
 
 ## Estructura
 
@@ -85,6 +96,7 @@ js/snapshots.js  registro del balance real
 js/targets.js    distribución objetivo y rebalanceo
 js/stats.js      máximos, mínimos y capitalización del detalle
 js/update.js     actualización de la app instalada
+js/vault.js      espejo interno, versiones y copia a Archivos
 js/catalog.js    activos disponibles y búsqueda
 js/store.js      posiciones y ajustes
 js/format.js     formato de moneda y números

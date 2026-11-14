@@ -18,6 +18,7 @@ import { snapshots, recordSnapshot, replaceSnapshots } from './snapshots.js';
 import { targets, plan, openTargets } from './targets.js';
 import { loadStats } from './stats.js';
 import { startUpdates, APP_VERSION } from './update.js';
+import * as V from './vault.js';
 
 const $ = id => document.getElementById(id);
 const ccy = () => state.settings.ccy;
@@ -206,6 +207,8 @@ function renderHome() {
   renderAlloc(v);
   renderNotice();
   renderList(v);
+  renderMovers(v);
+  if (!isDemo()) V.markSince(has);
 
   $('empty').hidden = has;
   $('demo-bar').hidden = !isDemo();
@@ -215,7 +218,7 @@ function renderHome() {
   $('live').title = { live: 'En vivo', stale: 'Reconectando', loading: 'Conectando', offline: 'Sin conexión' }[st];
 
   // The real history: one record of the balance every half hour the app is open.
-  if (has && !isDemo() && !v.loading) recordSnapshot(v.totalUsd);
+  if (has && !isDemo() && !v.loading && recordSnapshot(v.totalUsd)) mirrorNow();
 
   if (firstPaint) hideSplash();
   firstPaint = false;
@@ -279,13 +282,42 @@ function renderNotice() {
   const box = $('notice');
   const stocks = state.holdings.some(a => a.kind === 'stock');
   const st = P.stockState();
-  const show = stocks && st !== 'ok';
-  box.hidden = !show;
-  if (!show) return;
-  const msg = st === 'invalid' ? 'La llave de Finnhub no es válida' : 'Acciones sin precio en vivo';
-  if (box.dataset.msg === msg) return;
+  let msg = null, label = null, action = null;
+  if (stocks && st !== 'ok') {
+    msg = st === 'invalid' ? 'La llave de Finnhub no es válida' : 'Acciones sin precio en vivo';
+    label = st === 'invalid' ? 'Revisar' : 'Conectar';
+    action = () => openSettings();
+  } else if (state.holdings.length && !isDemo()) {
+    const days = V.backupDue();
+    if (days != null) {
+      msg = V.lastExport() ? `Sin copia fuera del iPhone desde hace ${days} días` : 'Aún no tienes una copia fuera del iPhone';
+      label = 'Guardar';
+      action = () => saveCopy();
+    }
+  }
+  box.hidden = !msg;
+  if (!msg || box.dataset.msg === msg) return;
   box.dataset.msg = msg;
-  box.replaceChildren(h('span', { text: msg }), h('button', { type: 'button', text: st === 'invalid' ? 'Revisar' : 'Conectar', onclick: () => openSettings() }));
+  box.replaceChildren(h('span', { text: msg }), h('button', { type: 'button', text: label, onclick: action }));
+}
+
+/** Each asset's share of today's change, largest first. */
+function renderMovers(v) {
+  const box = $('movers'), rows = $('movers-rows');
+  const list = v.rows.filter(r => r.dayAbs != null && Math.abs(r.dayAbs) >= 0.01).sort((a, b) => Math.abs(b.dayAbs) - Math.abs(a.dayAbs)).slice(0, 5);
+  box.hidden = list.length < 2;
+  if (box.hidden) return;
+  box.classList.toggle('masked', state.settings.hidden);
+  const max = Math.abs(list[0].dayAbs);
+  rows.replaceChildren(...list.map(r => {
+    const share = Math.abs(r.dayAbs) / max * 50;
+    const up = r.dayAbs > 0;
+    return h('button.mover', { type: 'button', onclick: () => openDetail(r.a.id) },
+      logo(r.a, 28),
+      h('span.mover-name', { text: r.a.name }),
+      h('span.mover-track', null, h('i' + (up ? '.up' : '.down'), { style: up ? { left: '50%', width: share + '%' } : { right: '50%', width: share + '%' } })),
+      h('span.mover-amt' + (up ? '.up' : '.down'), { text: F.signedMoney(r.dayAbs, ccy()) }));
+  }));
 }
 
 function slideRow(row, to, velocity = 0) {
@@ -791,7 +823,57 @@ function currencyView(sheet) {
   return makeView({ title: 'Moneda', body: [h('div.group', null, items)] });
 }
 
-function applyCopy(data) {
+/** The data as saved right now (with keys), for the copy inside the browser. */
+function vaultDoc() {
+  let store = null;
+  try { store = JSON.parse(localStorage.getItem('portfolio.v1')); } catch { /* none */ }
+  return { store, snaps: snapshots() };
+}
+
+function mirrorNow() {
+  if (!isDemo()) V.mirror(vaultDoc());
+}
+
+async function saveCopy() {
+  const ok = await V.saveFile(exportData({ snapshots: snapshots() }));
+  if (ok) { haptic(10); toast('Copia guardada'); scheduleRender(true); }
+}
+
+function versionsView(sheet) {
+  const group = h('div.group');
+  const note = h('p.hint', { text: 'Una versión por día (como empezó ese día) y una antes de cada borrado, importación o restauración. Se guardan las 20 más recientes en este iPhone.' });
+  const view = makeView({ title: 'Versiones guardadas', body: [group, note] });
+  V.versions().then(list => {
+    if (!list.length) { group.replaceWith(h('p.hint', { text: 'Todavía no hay versiones. Se crea una cada día que abres la app.' })); return; }
+    group.replaceChildren(...list.map(ver => {
+      const value = h('span', { text: `${ver.count} ${ver.count === 1 ? 'activo' : 'activos'}` });
+      const when = new Date(ver.t).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+      let armed = 0;
+      return h('button.field', {
+        type: 'button',
+        onclick: async () => {
+          if (Date.now() - armed > 3500) {
+            armed = Date.now();
+            const old = value.textContent;
+            value.textContent = 'Toca otra vez para restaurar';
+            setTimeout(() => { if (Date.now() - armed >= 3400) value.textContent = old; }, 3500);
+            return;
+          }
+          await V.checkpoint(vaultDoc(), 'Antes de restaurar');
+          replaceAll(ver.store);
+          replaceSnapshots(ver.snaps || []);
+          haptic(10);
+          sheet.close();
+          toast('Versión restaurada');
+        },
+      }, h('span.field-label', { text: ver.label ? `${when} · ${ver.label}` : when }), h('span.field-value', null, value));
+    }));
+  });
+  return view;
+}
+
+async function applyCopy(data) {
+  await V.checkpoint(vaultDoc(), 'Antes de importar');
   replaceAll(data);
   replaceSnapshots(data.snapshots || []);
 }
@@ -808,25 +890,26 @@ function openSettings() {
     try {
       const data = JSON.parse(await file.text());
       if (!Array.isArray(data.holdings)) throw new Error('shape');
-      applyCopy(data);
+      await applyCopy(data);
       sheet.close();
       toast('Portfolio importado');
     } catch { toast('Ese archivo no es una copia de Portfolio'); }
     fileInput.value = '';
   });
 
-  const doExport = () => {
-    const url = URL.createObjectURL(new Blob([exportData({ snapshots: snapshots() })], { type: 'application/json' }));
-    const link = h('a', { href: url, download: `portfolio-${new Date().toISOString().slice(0, 10)}.json` });
-    document.body.append(link);
-    link.click();
-    link.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 2000);
-  };
+  const lastValue = h('span');
+  const paintLast = () => { const t = V.lastExport(); lastValue.textContent = t ? F.ago(t) : 'Nunca'; };
+  paintLast();
 
   const wipe = h('button.field.danger', { type: 'button' }, h('span.field-label', { text: 'Borrar todo' }));
   wipe.addEventListener('click', () => {
-    if (Date.now() - wipeArmed < 3500) { replaceAll({ holdings: [] }); replaceSnapshots([]); sheet.close(); toast('Portfolio borrado'); return; }
+    if (Date.now() - wipeArmed < 3500) {
+      V.checkpoint(vaultDoc(), 'Antes de borrar').then(() => {
+        replaceAll({ holdings: [] }); replaceSnapshots([]); sheet.close();
+        toast('Portfolio borrado', { action: { label: 'Ver versiones', run: () => { const s = openSheet(versionsView({ close: () => s.close() })); } } });
+      });
+      return;
+    }
     wipeArmed = Date.now();
     wipe.firstChild.textContent = 'Toca otra vez para borrar';
     setTimeout(() => { wipe.firstChild.textContent = 'Borrar todo'; }, 3500);
@@ -852,9 +935,15 @@ function openSettings() {
       })),
       h('p.hint', { html: 'Llave gratuita en <a href="https://twelvedata.com/pricing" target="_blank" rel="noopener">twelvedata.com</a>. Da el histórico de acciones y ETFs, y el aproximado de plata, platino y paladio. Crypto y oro no la necesitan.' }),
       h('div.group-title', { text: 'Datos' }),
-      h('div.group', null, fieldButton('Exportar copia', { onclick: doExport }), fieldButton('Importar copia', { onclick: () => fileInput.click() }), wipe),
+      h('div.group', null,
+        fieldButton('Guardar en Archivos', { onclick: async () => { await saveCopy(); paintLast(); } }),
+        h('div.field', null, h('span.field-label', { text: 'Última copia fuera' }), h('span.field-value', null, lastValue)),
+        fieldButton('Versiones guardadas', { chevron: true, onclick: () => sheet.push(versionsView(sheet)) }),
+        fieldButton('Importar copia', { onclick: () => fileInput.click() }),
+        wipe),
       fileInput,
-      h('p.hint', { text: 'Tus posiciones se guardan solo en este dispositivo; usa Exportar copia para guardarlas fuera. Precios de Coinbase, CoinGecko, gold-api.com, Finnhub, Twelve Data y open.er-api.com.' }),
+      h('p.hint', { text: 'Todo se guarda solo y al instante en este iPhone, con una segunda copia interna y versiones diarias. Si borras la app de la pantalla de inicio se pierde todo: guarda una copia en Archivos (iCloud Drive) de vez en cuando.' }),
+      h('p.hint', { text: 'Precios de Coinbase, CoinGecko, gold-api.com, Finnhub, Twelve Data y open.er-api.com.' }),
       h('p.hint.version', { text: `Versión ${APP_VERSION}` }),
     ],
   });
@@ -963,7 +1052,20 @@ scroller.addEventListener('touchend', async () => {
 document.addEventListener('touchstart', () => {}, { passive: true });
 
 P.setPrevProvider(a => H.ref24(a));
-subscribe(() => { sync(); scheduleRender(true); });
+subscribe(() => { sync(); scheduleRender(true); mirrorNow(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden) V.flush(); });
+V.persist();
+// The working copy is gone but the internal mirror is not: bring it back.
+let hadStore = false;
+try { hadStore = localStorage.getItem('portfolio.v1') != null; } catch { /* no storage */ }
+if (!hadStore) {
+  V.recoverable().then(cur => {
+    if (!cur || state.holdings.length) return;
+    replaceAll(cur.store);
+    replaceSnapshots(cur.snaps || []);
+    toast('Datos recuperados de la copia interna');
+  });
+} else mirrorNow();
 P.onPrices(() => scheduleRender(false));
 H.onHistory(() => scheduleRender(false));
 

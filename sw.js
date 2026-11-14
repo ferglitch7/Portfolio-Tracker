@@ -1,12 +1,12 @@
 // Offline shell: the app's own files are cached so it opens without a
 // connection (showing the last known prices). Price and logo requests to other
 // hosts are never touched.
-const CACHE = 'portfolio-v4';
+const CACHE = 'portfolio-v5';
 const SHELL = [
   './', 'index.html', 'styles.css', 'manifest.webmanifest',
   'js/main.js', 'js/store.js', 'js/prices.js', 'js/format.js', 'js/catalog.js', 'js/catalog-data.js',
   'js/motion.js', 'js/logo.js', 'js/chart.js', 'js/sheet.js', 'js/ui.js', 'js/history.js', 'js/series.js',
-  'js/snapshots.js', 'js/targets.js', 'js/stats.js', 'js/update.js',
+  'js/snapshots.js', 'js/targets.js', 'js/stats.js', 'js/update.js', 'js/vault.js',
   'icons/icon-192.png', 'icons/apple-touch-icon.png',
 ];
 
