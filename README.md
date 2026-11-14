@@ -38,6 +38,7 @@ en uno o dos minutos y la app instalada se actualiza al abrirla.
 | Plata, platino, paladio | gold-api.com, cada 30 s | aproximado con un ETF (SLV, PPLT, PALL) vía Twelve Data | Twelve Data, gratuita |
 | Acciones y ETFs de EE. UU. | Finnhub, cada 15 s | Twelve Data | Finnhub y Twelve Data, gratuitas |
 | Efectivo / conversión | open.er-api.com, diaria | — | no |
+| Planes de retiro (401(k), IRA, Roth, pensión) | saldo que escribes; opcionalmente se mueve con un índice (VOO, VTI o VT vía Finnhub) desde la última actualización | — | Finnhub, si sigue un índice |
 | Otro activo | valor que escribes | — | — |
 
 Las llaves se pegan en Ajustes, se validan antes de guardarse y se quedan en

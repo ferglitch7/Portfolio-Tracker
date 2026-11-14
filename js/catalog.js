@@ -11,8 +11,34 @@ export const KINDS = {
   stock: { label: 'Acciones', color: 'var(--k-stock)' },
   metal: { label: 'Metales', color: 'var(--k-metal)' },
   cash: { label: 'Efectivo', color: 'var(--k-cash)' },
+  retire: { label: 'Retiro', color: 'var(--k-retire)' },
   custom: { label: 'Otros', color: 'var(--k-custom)' },
 };
+
+// Retirement plan providers. There is no way to read these accounts without
+// a paid aggregator, so a plan is a balance the user enters, optionally moving
+// with an index between updates.
+const R = (key, name, mono, color) => ({ id: `retire:${key}`, kind: 'retire', sym: '', name, provider: name, mono, color, template: true });
+export const RETIRE = [
+  R('vanguard', 'Vanguard', 'V', '#96151d'), R('fidelity', 'Fidelity', 'F', '#368727'),
+  R('schwab', 'Charles Schwab', 'CS', '#00a0df'), R('empower', 'Empower', 'E', '#1d3a8a'),
+  R('principal', 'Principal', 'P', '#0061a0'), R('troweprice', 'T. Rowe Price', 'TR', '#1b365d'),
+  R('merrill', 'Merrill', 'M', '#0a3d91'), R('johnhancock', 'John Hancock', 'JH', '#00843d'),
+  R('tiaa', 'TIAA', 'T', '#004b8d'), R('voya', 'Voya', 'V', '#ff6a13'),
+  R('other', 'Otro plan', '+', '#5e5ce6'),
+];
+
+/** Indices a retirement balance can follow between updates (as their ETFs). */
+export const TRACKS = [
+  [null, 'Nada'], ['VOO', 'S&P 500'], ['VTI', 'Total EE. UU.'], ['VT', 'Mundial'],
+];
+export const ACCOUNT_TYPES = ['401(k)', 'IRA', 'Roth IRA', 'Pensión'];
+
+/** A new account from a provider template (several per provider are fine). */
+export function newRetireAccount(t) {
+  const id = 'retire:' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  return { id, kind: 'retire', sym: '', provider: t.provider === 'Otro plan' ? '' : t.provider, mono: t.mono, color: t.color, name: t.provider === 'Otro plan' ? '' : `${t.provider} 401(k)`, accType: '401(k)', track: 'VOO' };
+}
 
 const CG_IMG = 'https://coin-images.coingecko.com/coins/images/';
 
@@ -75,8 +101,8 @@ function rank(asset, q) {
 export function searchLocal(query, kind = 'all') {
   const q = norm(query.trim());
   const pools = kind === 'all'
-    ? [CRYPTO, STOCKS, METALS, CASH]
-    : [{ crypto: CRYPTO, stock: STOCKS, metal: METALS, cash: CASH }[kind] || []];
+    ? [CRYPTO, STOCKS, METALS, CASH, RETIRE]
+    : [{ crypto: CRYPTO, stock: STOCKS, metal: METALS, cash: CASH, retire: RETIRE }[kind] || []];
   if (!q) {
     if (kind !== 'all') return pools[0].slice(0, 60);
     // A mixed starting list: the names people reach for first in each class.

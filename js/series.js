@@ -39,7 +39,7 @@ export function marketSeries({ range, span, now, holdings, quoteOf, peek, rate, 
     const q = quoteOf(a);
     if (!q) continue; // not in the balance either
     live += q.p * a.qty;
-    const fixed = a.kind === 'cash' || a.kind === 'custom';
+    const fixed = a.kind === 'cash' || a.kind === 'custom' || a.kind === 'retire';
     const h = fixed ? null : peek(a, range);
     if (!h || h.pts.length < 2) {
       // No history: held flat at today's price, and reported as such.

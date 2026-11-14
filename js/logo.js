@@ -23,6 +23,17 @@ function metalBadge(sym) {
   </svg>`;
 }
 
+function dollarSeal() {
+  return `<svg viewBox="0 0 48 48" aria-hidden="true">
+    <defs><linearGradient id="usd-seal" x1="0.15" y1="0" x2="0.85" y2="1">
+      <stop offset="0" stop-color="#5fd38a"/><stop offset="0.55" stop-color="#22a35a"/><stop offset="1" stop-color="#0f6b38"/>
+    </linearGradient></defs>
+    <circle cx="24" cy="24" r="24" fill="url(#usd-seal)"/>
+    <circle cx="24" cy="24" r="19.500" fill="none" stroke="#fff" stroke-opacity="0.55" stroke-width="1.2" stroke-dasharray="2 2.2"/>
+    <text x="24" y="31.500" text-anchor="middle" font-size="22" font-weight="800" fill="#fff" style="font-family:ui-rounded,-apple-system,system-ui,sans-serif">$</text>
+  </svg>`;
+}
+
 function hue(str) {
   let x = 0;
   for (let i = 0; i < str.length; i++) x = (x * 31 + str.charCodeAt(i)) >>> 0;
@@ -57,6 +68,12 @@ export function logo(asset, size) {
   const el = h('span.logo', { 'aria-hidden': 'true' });
   if (size) el.style.setProperty('--logo', size + 'px');
   if (asset.kind === 'metal') { el.innerHTML = metalBadge(asset.sym); return el; }
+  if (asset.kind === 'cash' && asset.sym === 'USD') { el.innerHTML = dollarSeal(); return el; }
+  if (asset.kind === 'retire') {
+    const label = asset.mono || (asset.name || '?').slice(0, 1).toUpperCase();
+    el.append(h('span.logo-mono', { text: label, style: { background: asset.color || '#5e5ce6', fontSize: label.length > 1 ? '0.32em' : '0.42em' } }));
+    return el;
+  }
 
   const list = sources(asset);
   const fallback = monogram(asset);

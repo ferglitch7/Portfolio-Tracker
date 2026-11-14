@@ -25,6 +25,7 @@
   --k-metal: #d9a520;
   --k-cash: #20b8a6;
   --k-custom: #a550e0;
+  --k-retire: #5e5ce6;
   --blur-bg: rgba(242, 242, 247, 0.78);
   --glass: rgba(255, 255, 255, 0.66);
   --glass-edge: rgba(255, 255, 255, 0.85);
@@ -66,6 +67,7 @@
     --k-metal: #f2c94c;
     --k-cash: #40d8c4;
     --k-custom: #bf5af2;
+    --k-retire: #7d7aff;
     --blur-bg: rgba(0, 0, 0, 0.7);
     --glass: rgba(118, 118, 128, 0.2);
     --glass-edge: rgba(255, 255, 255, 0.1);

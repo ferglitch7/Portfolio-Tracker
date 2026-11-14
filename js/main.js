@@ -7,7 +7,7 @@ import {
 import * as P from './prices.js';
 import * as H from './history.js';
 import * as F from './format.js';
-import { KINDS, UNITS, METALS, CRYPTO, STOCKS, CASH, searchLocal, searchRemote, newCustomAsset } from './catalog.js';
+import { KINDS, UNITS, METALS, CRYPTO, STOCKS, CASH, searchLocal, searchRemote, newCustomAsset, newRetireAccount, TRACKS, ACCOUNT_TYPES } from './catalog.js';
 import { h, spring, pan, rubber, haptic, ICONS, reduceMotion } from './motion.js';
 import { logo } from './logo.js';
 import { createChart } from './chart.js';
@@ -80,8 +80,11 @@ function qtyLabel(a) {
   }
   if (a.kind === 'cash') return `${F.qty(a.qty)} ${a.sym}`;
   if (a.kind === 'custom') return 'Manual';
+  if (a.kind === 'retire') return `${a.accType || 'Retiro'} · ${a.track ? trackName(a.track) : 'saldo fijo'}`;
   return `${F.qty(a.qty)} ${a.sym}`;
 }
+
+function trackName(sym) { return (TRACKS.find(t => t[0] === sym) || [null, sym])[1]; }
 
 // ============================================================================
 // Home
@@ -195,7 +198,16 @@ function renderChart(c) {
   }
 }
 
+function anchorPlans() {
+  for (const a of state.holdings) {
+    if (a.kind !== 'retire' || !a.track || a.ref) continue;
+    const p = P.livePrice({ id: 'stock:' + a.track });
+    if (p) updateHolding(a.id, { ref: p });
+  }
+}
+
 function renderHome() {
+  if (!isDemo()) anchorPlans();
   const v = valuation();
   const u = unitNow();
   const has = state.holdings.length > 0;
@@ -526,6 +538,7 @@ function reorderable(row) {
 function createRow(a) {
   const name = h('div.row-name'), sub = h('div.row-sub'), val = h('div.row-val'), chg = h('div.row-chg');
   const spark = sparkEl();
+  if (H.availability(a) === 'none') spark.style.display = 'none';
   const main = h('div.row-main', { role: 'button', tabIndex: 0 },
     logo(a), h('div.row-mid', null, name, sub), spark, h('div.row-end', null, val, chg));
   const edit = h('button.act.edit', { type: 'button', tabIndex: -1, 'aria-label': 'Editar', html: ICONS.pencil });
@@ -608,7 +621,7 @@ function renderList(v) {
       row.chg.className = 'row-chg ' + (ratio > 0.00005 ? 'up' : ratio < -0.00005 ? 'down' : '');
     } else {
       row.chg.className = 'row-chg';
-      if (a.kind === 'custom' || (a.kind === 'cash' && a.sym === ccy())) row.chg.textContent = '';
+      if (a.kind === 'custom' || a.kind === 'retire' || (a.kind === 'cash' && a.sym === ccy())) row.chg.textContent = '';
       else row.chg.textContent = r.q ? F.price(r.q.p * v.rate, ccy()) : a.kind === 'stock' ? 'Sin precio' : 'Cargando';
     }
 
@@ -680,7 +693,7 @@ function hideSplash() {
 
 function pickRow(a, onPick, { all }) {
   const held = getHolding(a.id);
-  const sub = all && a.kind !== 'cash' ? `${a.sym} · ${KINDS[a.kind].label}` : a.sym;
+  const sub = a.kind === 'retire' ? (a.template ? '401(k), IRA, Roth, pensión' : qtyLabel(a)) : all && a.kind !== 'cash' ? `${a.sym} · ${KINDS[a.kind].label}` : a.sym;
   return h('button.pick', { type: 'button', onclick: onPick },
     logo(a),
     h('div.pick-mid', null, h('div.pick-name', { text: a.name }), h('div.pick-sub', { text: sub })),
@@ -693,7 +706,7 @@ function openAdd() {
     id: 'add-search', type: 'search', placeholder: 'Buscar', autocomplete: 'off', autocorrect: 'off',
     autocapitalize: 'off', spellcheck: 'false', enterkeyhint: 'search', 'aria-label': 'Buscar activo',
   });
-  const seg = segmented([['all', 'Todo'], ['crypto', 'Crypto'], ['stock', 'Acciones'], ['metal', 'Metales'], ['cash', 'Efectivo']], kind, k => { kind = k; update(); });
+  const seg = segmented([['all', 'Todo'], ['crypto', 'Crypto'], ['stock', 'Acciones'], ['metal', 'Metales'], ['cash', 'Efectivo'], ['retire', 'Retiro']], kind, k => { kind = k; update(); });
   const list = h('div.pick-list');
   const busy = h('div.searching', { hidden: true }, h('span.spinner.spin'));
   const hint = h('p.hint', { hidden: true }, 'Para buscar cualquier acción o ETF de EE. UU., conecta Finnhub en ',
@@ -705,7 +718,7 @@ function openAdd() {
 
   const paint = items => {
     list.replaceChildren(...items.map(a => pickRow(a, () => {
-      const v = amountView(sheet, a);
+      const v = amountView(sheet, a.kind === 'retire' && a.template ? newRetireAccount(a) : a);
       sheet.push(v);
       v.focus();
     }, { all: kind === 'all' })));
@@ -745,6 +758,7 @@ function openAdd() {
 
 /** Quantity (and optional average cost) for a new or existing position. */
 function amountView(sheet, asset, { edit = false } = {}) {
+  if (asset.kind === 'retire') return retireView(sheet, asset, { edit });
   const held = getHolding(asset.id);
   const isMetal = asset.kind === 'metal', isCash = asset.kind === 'cash', isCustom = asset.kind === 'custom';
   let unit = isMetal ? (held && UNITS[held.unit] ? held.unit : 'oz') : null;
@@ -852,6 +866,91 @@ function amountView(sheet, asset, { edit = false } = {}) {
   return view;
 }
 
+/**
+ * A retirement plan: the balance as of today, the kind of account and, if
+ * chosen, an index the balance follows until the next update.
+ */
+function retireView(sheet, asset, { edit = false } = {}) {
+  const held = edit ? getHolding(asset.id) : null;
+  const base = held || asset;
+  const r = () => P.rate(ccy());
+  let accType = base.accType || '401(k)', track = base.track === undefined ? 'VOO' : base.track;
+
+  const nameEl = h('div.amt-name', { text: base.name || 'Plan de retiro' });
+  const qtyInput = h('input.amt-input', { id: 'amt-qty', type: 'text', inputmode: 'decimal', placeholder: '0', autocomplete: 'off', 'aria-label': 'Saldo actual' });
+  const unitEl = h('span.amt-unit', { text: ccy() });
+  const nameInput = h('input.field-input', { id: 'amt-name', type: 'text', placeholder: 'Fidelity 401(k)…', autocomplete: 'off', value: base.name || '' });
+  const costInput = h('input.field-input', { id: 'amt-cost', type: 'text', inputmode: 'decimal', placeholder: 'Opcional', autocomplete: 'off' });
+  const note = h('p.hint', { style: { textAlign: 'center' } });
+  const btn = h('button.btn-primary', { type: 'button', text: edit ? 'Guardar' : 'Añadir', disabled: true });
+
+  if (held) {
+    const q = P.quoteOf(held);
+    qtyInput.value = F.editable((q ? q.p : held.balance) * r());
+    if (held.cost != null) costInput.value = F.editable(held.cost * r());
+  }
+
+  const typeSeg = segmented(ACCOUNT_TYPES.map(t => [t, t]), accType, t => {
+    const auto = !nameInput.value.trim() || nameInput.value.trim() === `${base.provider} ${accType}`;
+    accType = t;
+    if (auto && base.provider) { nameInput.value = `${base.provider} ${t}`; nameEl.textContent = nameInput.value; }
+    refresh();
+  });
+  const trackSeg = segmented(TRACKS.map(([k, label]) => [k, label]), track, t => { track = t; refresh(); });
+
+  function refresh() {
+    const n = F.parseNumber(qtyInput.value);
+    const raw = costInput.value.trim();
+    btn.disabled = !(n > 0 && nameInput.value.trim() && (!raw || F.parseNumber(raw) >= 0));
+    if (!track) note.textContent = 'El saldo queda fijo hasta que lo actualices.';
+    else if (!state.settings.finnhubKey) note.textContent = `Para que se mueva con el ${trackName(track)} necesitas la llave de Finnhub (Ajustes). Mientras tanto queda fijo.`;
+    else note.textContent = `Entre actualizaciones, el saldo se moverá como el ${trackName(track)} (${track}). Actualízalo de vez en cuando con el de tu estado de cuenta.`;
+  }
+
+  function save() {
+    const n = F.parseNumber(qtyInput.value);
+    if (!(n > 0)) return;
+    const c = F.parseNumber(costInput.value);
+    const hasCost = costInput.value.trim() !== '' && Number.isFinite(c);
+    const ref = track ? P.livePrice({ id: 'stock:' + track }) : null;
+    const patch = { name: nameInput.value.trim(), accType, track, balance: n / r(), ref, at: Date.now(), cost: hasCost ? c / r() : null };
+    haptic(10);
+    if (edit) updateHolding(asset.id, patch);
+    else addHolding({ ...asset, ...patch, template: undefined }, 1, patch.cost);
+    if (edit && sheet.depth > 1) sheet.pop(); else sheet.close();
+  }
+
+  const fit = () => {
+    const text = qtyInput.value || '0';
+    qtyInput.style.fontSize = text.length > 12 ? '29px' : text.length > 8 ? '39px' : '';
+    const cs = getComputedStyle(qtyInput);
+    meter.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+    qtyInput.style.width = Math.ceil(meter.measureText(text).width + parseFloat(cs.fontSize) * 0.1) + 'px';
+  };
+  qtyInput.addEventListener('input', () => { fit(); refresh(); });
+  costInput.addEventListener('input', refresh);
+  nameInput.addEventListener('input', () => { nameEl.textContent = nameInput.value.trim() || 'Plan de retiro'; refresh(); });
+  btn.addEventListener('click', save);
+  for (const el of [qtyInput, costInput, nameInput]) el.addEventListener('keydown', e => { if (e.key === 'Enter' && !btn.disabled) save(); });
+
+  const field = (label, input, suffix) => h('label.field', null, h('span.field-label', { text: label }), input, suffix && h('span.field-suffix', { text: suffix }));
+  const view = makeView({
+    title: edit ? 'Editar' : '',
+    body: [
+      h('div.amt-top', null, logo(base), nameEl, h('div.amt-price', { text: 'Saldo actual de tu estado de cuenta' })),
+      h('div.amt-entry', null, h('div.amt-line', null, qtyInput, unitEl)),
+      h('div.group-title', { text: 'Tipo de cuenta' }), typeSeg.el,
+      h('div.group-title', { text: 'Se mueve con' }), trackSeg.el, note,
+      h('div.group', null, field('Nombre', nameInput), field('Total aportado', costInput, ccy())),
+    ],
+    foot: btn,
+  });
+  view.onShow = fit;
+  view.focus = () => { fit(); try { qtyInput.focus({ preventScroll: true }); } catch { /* not focusable yet */ } };
+  refresh();
+  return view;
+}
+
 // ============================================================================
 // Detail
 // ============================================================================
@@ -876,6 +975,7 @@ function openDetail(id, { edit = false } = {}) {
     h('span', { text: 'El gráfico necesita tu llave de Twelve Data' }),
     h('button', { type: 'button', text: 'Añadir', onclick: () => openSettings() }));
   const statsGroup = h('div.group', { hidden: true });
+  const planNote = h('p.hint');
   const fieldRow = (label, value) => h('div.field', null, h('span.field-label', { text: label }), value);
 
   function paint() {
@@ -885,7 +985,16 @@ function openDetail(id, { edit = false } = {}) {
     const v = valuation();
     const row = v.rows.find(x => x.a.id === id);
     nameEl.textContent = a.name;
-    symEl.textContent = a.kind === 'metal' ? `${a.sym} · por oz troy` : a.kind === 'custom' ? 'Valor manual' : a.kind === 'cash' ? a.sym : `${a.sym} · ${KINDS[a.kind].label}`;
+    symEl.textContent = a.kind === 'metal' ? `${a.sym} · por oz troy` : a.kind === 'custom' ? 'Valor manual' : a.kind === 'cash' ? a.sym
+      : a.kind === 'retire' ? qtyLabel(a) : `${a.sym} · ${KINDS[a.kind].label}`;
+    if (a.kind === 'retire') {
+      const since = a.at ? F.dateLabel(a.at) : null;
+      const q = P.quoteOf(a);
+      const moved = q && a.balance ? q.p / a.balance - 1 : 0;
+      planNote.textContent = !since ? '' : a.track && a.ref
+        ? `Saldo actualizado el ${since}. Desde entonces el ${trackName(a.track)} ${moved >= 0 ? 'subió' : 'bajó'} ${F.pct(Math.abs(moved), { sign: false })}.`
+        : `Saldo actualizado el ${since}.`;
+    }
 
     if (scrub) {
       big.textContent = F.price(scrub.v * r, ccy());
@@ -934,7 +1043,7 @@ function openDetail(id, { edit = false } = {}) {
 
   async function stats() {
     const a = getHolding(id) || a0;
-    if (a.kind === 'cash' || a.kind === 'custom') return;
+    if (a.kind === 'cash' || a.kind === 'custom' || a.kind === 'retire') return;
     const q = P.quoteOf(a);
     const rows = await loadStats(a, { price: q && q.p, rate: P.rate(ccy()), ccy: ccy(), finnhubKey: state.settings.finnhubKey, historyKey: state.settings.historyKey });
     if (!rows.length) return;
@@ -948,10 +1057,11 @@ function openDetail(id, { edit = false } = {}) {
       h('div.detail-price', null, big, h('div.detail-meta', null, pill, meta)),
       chartHost, chartHost && seg.el, approx, needKey,
       h('div.group', null,
-        a0.kind !== 'custom' && fieldRow('Cantidad', vQty), fieldRow('Valor', vVal),
-        a0.kind !== 'cash' && fieldRow(a0.kind === 'custom' ? 'Costo' : 'Costo promedio', vCost),
+        a0.kind !== 'custom' && a0.kind !== 'retire' && fieldRow('Cantidad', vQty), fieldRow('Valor', vVal),
+        a0.kind !== 'cash' && fieldRow(a0.kind === 'custom' ? 'Costo' : a0.kind === 'retire' ? 'Total aportado' : 'Costo promedio', vCost),
         a0.kind !== 'cash' && fieldRow('Ganancia', vGain), fieldRow('Peso', vShare)),
       statsGroup,
+      a0.kind === 'retire' && planNote,
       h('div.detail-actions', null,
         h('button.btn-secondary', { type: 'button', text: 'Editar', onclick: () => pushEdit() }),
         h('button.btn-text.danger', { type: 'button', text: 'Eliminar', onclick: () => { sheet.close(); setTimeout(() => deleteHolding(id), 280); } })),
@@ -1190,7 +1300,11 @@ function sync() {
   P.setFinnhubKey(state.settings.finnhubKey);
   H.setHistoryKey(state.settings.historyKey);
   const held = new Set(state.holdings.map(a => a.id));
-  P.track([...state.holdings, ...[BTC, XAU].filter(a => !held.has(a.id))]);
+  // Plans that follow an index need that index's price.
+  const followed = [...new Set(state.holdings.filter(a => a.kind === 'retire' && a.track).map(a => a.track))]
+    .map(sym => STOCKS.find(s => s.sym === sym) || { id: 'stock:' + sym, kind: 'stock', sym, name: sym })
+    .filter(a => !held.has(a.id));
+  P.track([...state.holdings, ...[BTC, XAU].filter(a => !held.has(a.id)), ...followed]);
   rangeSeg.set(state.settings.range);
 }
 

@@ -114,6 +114,12 @@ export function quoteOf(a) {
     const r = fx.rates[a.sym];
     return r ? { p: 1 / r, prev: null, t: fx.t, fixed: true } : null;
   }
+  if (a.kind === 'retire') {
+    if (!(a.balance > 0)) return null;
+    const q = a.track && a.ref ? quotes.get('stock:' + a.track) : null;
+    if (q) return { p: a.balance * q.p / a.ref, prev: q.prev ? a.balance * q.prev / a.ref : null, t: q.t };
+    return { p: a.balance, prev: null, t: a.at || 0, fixed: true };
+  }
   if (a.kind === 'custom') {
     return Number.isFinite(a.price) ? { p: a.price, prev: null, t: 0, fixed: true } : null;
   }

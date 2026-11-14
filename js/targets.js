@@ -7,7 +7,7 @@ import { KINDS } from './catalog.js';
 import { h, haptic, ICONS } from './motion.js';
 import { openSheet, makeView } from './sheet.js';
 
-export const KIND_ORDER = ['crypto', 'stock', 'metal', 'cash', 'custom'];
+export const KIND_ORDER = ['crypto', 'stock', 'metal', 'cash', 'retire', 'custom'];
 
 const sumOf = t => KIND_ORDER.reduce((n, k) => n + (Number(t[k]) || 0), 0);
 
