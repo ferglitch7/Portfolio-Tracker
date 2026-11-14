@@ -13,7 +13,7 @@ import { logo } from './logo.js';
 import { createChart } from './chart.js';
 import { openSheet, makeView, toast } from './sheet.js';
 import { Roller, segmented, setPill, toggle, sparkEl, drawSpark } from './ui.js';
-import { marketSeries, realSeries, rangeForSpan } from './series.js';
+import { marketSeries, realSeries, rangeForSpan, priceAt } from './series.js';
 import { snapshots, recordSnapshot, replaceSnapshots } from './snapshots.js';
 import { targets, plan, openTargets } from './targets.js';
 import { loadStats } from './stats.js';
@@ -208,6 +208,7 @@ function renderHome() {
   renderNotice();
   renderList(v);
   renderMovers(v);
+  renderPerf(v);
   if (!isDemo()) V.markSince(has);
 
   $('empty').hidden = has;
@@ -301,6 +302,63 @@ function renderNotice() {
   box.replaceChildren(h('span', { text: msg }), h('button', { type: 'button', text: label, onclick: action }));
 }
 
+// ---- performance over 7 days, 30 days and a year ----------------------------
+
+const PERF = [['1S', '7 días'], ['1M', '30 días'], ['1A', '1 año']];
+let perfSel = '1M';
+const perfTiles = new Map();
+
+/**
+ * What today's positions gained or lost over each period, plus the best and
+ * worst asset of the selected one. Quiet by design: three figures and a line.
+ */
+function renderPerf(v) {
+  const box = $('perf'), tilesEl = $('perf-tiles'), line = $('perf-line');
+  const now = Date.now(), r = v.rate;
+  const results = PERF.map(([range, label]) => {
+    const s = marketSeries({ range, span: H.RANGES[range].span, now, holdings: state.holdings, quoteOf: P.quoteOf, peek: H.peek, rate: r, unit: null });
+    const first = s.pts[0][1], last = s.pts[s.pts.length - 1][1];
+    return { range, label, ok: s.moved && first > 0, pct: first > 0 ? last / first - 1 : 0, abs: last - first };
+  });
+  box.hidden = !results.some(x => x.ok);
+  if (box.hidden) return;
+  box.classList.toggle('masked', state.settings.hidden);
+  // The chosen period, or the first one with data while the others still load.
+  const sel = results.find(x => x.range === perfSel && x.ok) ? perfSel : results.find(x => x.ok).range;
+
+  for (const x of results) {
+    let t = perfTiles.get(x.range);
+    if (!t) {
+      t = h('button.perf-tile', { type: 'button', onclick: () => { perfSel = x.range; haptic(5); scheduleRender(true); } },
+        h('span.perf-label', { text: x.label }), h('span.perf-pct'), h('span.perf-abs'));
+      tilesEl.append(t);
+      perfTiles.set(x.range, t);
+    }
+    const tone = !x.ok ? '' : x.pct > 0.00005 ? 'up' : x.pct < -0.00005 ? 'down' : '';
+    t.className = 'perf-tile ' + tone + (x.range === sel ? ' on' : '');
+    t.disabled = !x.ok;
+    t.setAttribute('aria-pressed', String(x.range === sel));
+    t.children[1].textContent = x.ok ? F.pct(x.pct) : '—';
+    t.children[2].textContent = x.ok ? F.signedMoney(x.abs, ccy()) : '';
+  }
+
+  // Best and worst asset over the selected period, by their own price change.
+  const span = H.RANGES[sel].span;
+  const moves = [];
+  for (const a of state.holdings) {
+    const q = P.quoteOf(a), hist = H.peek(a, sel);
+    if (!q || !hist || hist.pts.length < 2) continue;
+    const then = priceAt(hist.pts, now - span);
+    if (then > 0) moves.push({ a, pct: q.p / then - 1 });
+  }
+  moves.sort((x, y) => y.pct - x.pct);
+  const part = (label, m) => h('span.perf-item', null, h('span.perf-k', { text: label }), h('span', { text: m.a.name }), h('b.' + (m.pct >= 0 ? 'up' : 'down'), { text: F.pct(m.pct) }));
+  if (!moves.length) line.replaceChildren();
+  else if (moves.length === 1) line.replaceChildren(part('', moves[0]));
+  else line.replaceChildren(part('Mejor', moves[0]), part('Peor', moves[moves.length - 1]));
+  line.hidden = !moves.length;
+}
+
 /** Each asset's share of today's change, largest first. */
 function renderMovers(v) {
   const box = $('movers'), rows = $('movers-rows');
@@ -309,13 +367,17 @@ function renderMovers(v) {
   if (box.hidden) return;
   box.classList.toggle('masked', state.settings.hidden);
   const max = Math.abs(list[0].dayAbs);
+  // Bars grow from a centre line only when some assets rose and others fell.
+  const mixed = list.some(r => r.dayAbs > 0) && list.some(r => r.dayAbs < 0);
+  rows.classList.toggle('mixed', mixed);
   rows.replaceChildren(...list.map(r => {
-    const share = Math.abs(r.dayAbs) / max * 50;
     const up = r.dayAbs > 0;
+    const share = Math.abs(r.dayAbs) / max * (mixed ? 50 : 100);
+    const style = !mixed ? { left: '0', width: share + '%' } : up ? { left: '50%', width: share + '%' } : { right: '50%', width: share + '%' };
     return h('button.mover', { type: 'button', onclick: () => openDetail(r.a.id) },
       logo(r.a, 28),
       h('span.mover-name', { text: r.a.name }),
-      h('span.mover-track', null, h('i' + (up ? '.up' : '.down'), { style: up ? { left: '50%', width: share + '%' } : { right: '50%', width: share + '%' } })),
+      h('span.mover-track', null, h('i' + (up ? '.up' : '.down'), { style })),
       h('span.mover-amt' + (up ? '.up' : '.down'), { text: F.signedMoney(r.dayAbs, ccy()) }));
   }));
 }
