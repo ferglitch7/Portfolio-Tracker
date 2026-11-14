@@ -19,6 +19,7 @@ import { targets, plan, openTargets } from './targets.js';
 import { loadStats } from './stats.js';
 import { startUpdates, APP_VERSION } from './update.js';
 import * as V from './vault.js';
+import { renderGoalCard, openGoal } from './goal.js';
 
 const $ = id => document.getElementById(id);
 const ccy = () => state.settings.ccy;
@@ -205,6 +206,7 @@ function renderHome() {
   renderChart(ctx);
   paintHero(ctx);
   renderAlloc(v);
+  renderGoalCard($('goal'), v);
   renderNotice();
   renderList(v);
   renderMovers(v);
@@ -526,11 +528,13 @@ function scheduleRender(now) {
   renderTimer = setTimeout(() => { renderTimer = 0; lastRender = performance.now(); renderHome(); }, wait);
 }
 
+// The launch mark plays a short 3D build; let it finish (under a second)
+// before fading out, without holding the app back any longer than that.
 function hideSplash() {
   const s = $('splash');
   if (!s) return;
-  s.classList.add('gone');
-  setTimeout(() => s.remove(), 500);
+  const wait = Math.max(0, 900 - performance.now());
+  setTimeout(() => { s.classList.add('gone'); setTimeout(() => s.remove(), 500); }, wait);
 }
 
 // ============================================================================
@@ -1055,6 +1059,7 @@ $('empty-add').addEventListener('click', () => openAdd());
 $('empty-demo').addEventListener('click', () => { haptic(8); enterDemo(demoHoldings()); });
 $('demo-exit').addEventListener('click', () => exitDemo());
 $('btn-targets').addEventListener('click', () => openTargets(valuation));
+$('goal').addEventListener('click', () => { haptic(6); openGoal(valuation); });
 $('chart-note').addEventListener('click', () => { if ($('chart-note').dataset.action) openSettings(); });
 $('change').addEventListener('click', () => {
   if (!$('change').dataset.toggle) return;

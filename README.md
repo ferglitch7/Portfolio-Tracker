@@ -66,6 +66,16 @@ El rango **Real** dibuja el balance que la app registró de verdad (una foto
 cada media hora mientras está abierta), así que empieza vacío y se llena con el
 uso.
 
+## Meta
+
+Tarjeta en inicio y hoja propia (`js/goal.js`, cálculos en `js/goal-math.js`):
+progreso hacia una cantidad (por defecto "Road to 1M"), hitos redondos que se
+celebran una vez al cruzarlos, y una proyección de cuándo llegas con el aporte
+mensual y la rentabilidad anual que elijas (interés compuesto mensual). Muestra
+también cuánto aportar para llegar en 5, 10, 15 o 20 años y cuánto antes llegas
+aportando un poco más. Todo depende de la rentabilidad supuesta: no es una
+predicción.
+
 ## Datos
 
 Todo se guarda solo y al instante en el navegador donde la usas, en tres capas:
@@ -97,6 +107,8 @@ js/targets.js    distribución objetivo y rebalanceo
 js/stats.js      máximos, mínimos y capitalización del detalle
 js/update.js     actualización de la app instalada
 js/vault.js      espejo interno, versiones y copia a Archivos
+js/goal.js       meta: tarjeta, hoja, hitos y celebración
+js/goal-math.js  interés compuesto, plazos y aportes necesarios
 js/catalog.js    activos disponibles y búsqueda
 js/store.js      posiciones y ajustes
 js/format.js     formato de moneda y números

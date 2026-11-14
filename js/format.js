@@ -77,6 +77,12 @@ export function price(v, ccy) {
   return moneyFormat(ccy, d).format(v);
 }
 
+/** A whole amount, no cents: $11,830. For estimates, where cents are noise. */
+export function wholeMoney(v, ccy) {
+  if (!Number.isFinite(v)) return '—';
+  return nf(`w:${ccy}`, { style: 'currency', currency: ccy, currencyDisplay: 'narrowSymbol', maximumFractionDigits: 0, minimumFractionDigits: 0, useGrouping: 'always' }).format(Math.round(v));
+}
+
 /** Large amounts in short form: $1.37 B. */
 export function compactMoney(v, ccy) {
   if (!Number.isFinite(v)) return '—';
