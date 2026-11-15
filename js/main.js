@@ -357,17 +357,18 @@ function renderPerf(v) {
     t.children[2].textContent = x.ok ? (x.abs < 0 ? '−' : x.abs > 0 ? '+' : '') + F.wholeMoney(Math.abs(x.abs), ccy()) : '';
   }
 
-  // Today: which assets moved the balance. Other periods: the best and worst asset.
-  const showMovers = sel === 'hoy' && renderMovers(v) >= 1;
-  $('movers-rows').hidden = !showMovers;
-  if (sel === 'hoy') { line.hidden = true; return; }
-  const span = H.RANGES[sel].span;
+  // The best and worst asset of the selected period, by their own price change.
   const moves = [];
+  if (sel === 'hoy') {
+    for (const r of v.rows) if (r.dayPct != null && r.a.kind !== 'cash') moves.push({ a: r.a, pct: r.dayPct });
+  } else {
+  const span = H.RANGES[sel].span;
   for (const a of state.holdings) {
     const q = P.quoteOf(a), hist = H.peek(a, sel);
     if (!q || !hist || hist.pts.length < 2) continue;
     const then = priceAt(hist.pts, now - span);
     if (then > 0) moves.push({ a, pct: q.p / then - 1 });
+  }
   }
   moves.sort((x, y) => y.pct - x.pct);
   const part = (label, m) => h('span.perf-item', null, h('span.perf-k', { text: label }), h('span', { text: m.a.name }), h('b.' + (m.pct >= 0 ? 'up' : 'down'), { text: F.pct(m.pct) }));
@@ -375,28 +376,6 @@ function renderPerf(v) {
   else if (moves.length === 1) line.replaceChildren(part('', moves[0]));
   else line.replaceChildren(part('Mejor', moves[0]), part('Peor', moves[moves.length - 1]));
   line.hidden = !moves.length;
-}
-
-/** Each asset's share of today's change, largest first. Returns how many. */
-function renderMovers(v) {
-  const rows = $('movers-rows');
-  const list = v.rows.filter(r => r.dayAbs != null && Math.abs(r.dayAbs) >= 0.01).sort((a, b) => Math.abs(b.dayAbs) - Math.abs(a.dayAbs)).slice(0, 4);
-  if (!list.length) return 0;
-  const max = Math.abs(list[0].dayAbs);
-  // Bars grow from a centre line only when some assets rose and others fell.
-  const mixed = list.some(r => r.dayAbs > 0) && list.some(r => r.dayAbs < 0);
-  rows.classList.toggle('mixed', mixed);
-  rows.replaceChildren(...list.map(r => {
-    const up = r.dayAbs > 0;
-    const share = Math.abs(r.dayAbs) / max * (mixed ? 50 : 100);
-    const style = !mixed ? { left: '0', width: share + '%' } : up ? { left: '50%', width: share + '%' } : { right: '50%', width: share + '%' };
-    return h('button.mover', { type: 'button', onclick: () => openDetail(r.a.id) },
-      logo(r.a, 28),
-      h('span.mover-name', { text: r.a.name }),
-      h('span.mover-track', null, h('i' + (up ? '.up' : '.down'), { style })),
-      h('span.mover-amt' + (up ? '.up' : '.down'), { text: F.signedMoney(r.dayAbs, ccy()) }));
-  }));
-  return list.length;
 }
 
 function slideRow(row, to, velocity = 0) {
