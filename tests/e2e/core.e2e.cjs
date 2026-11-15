@@ -50,13 +50,16 @@ test('add, merge a second buy, edit, delete and undo', async () => {
   assert.equal(await p.textContent('.detail-price .big'), '$100.000,00');
   assert.ok((await p.$eval('.sheet .chart-line', e => e.getAttribute('d') || '')).length > 50, 'chart drawn');
   for (const r of ['1S', '1A']) { await p.tap(`.sheet .seg button:has-text("${r}")`); await h.wait(900); }
-  await p.tap('.sheet .btn-secondary'); await h.wait(900);
-  assert.equal(await p.inputValue('#amt-qty'), '1');
-  await p.fill('#amt-qty', '2');
+  await p.keyboard.press('Escape'); await h.wait(900);
+  // a position without trades is edited directly (gold, shown in grams)
+  await p.tap('.row:has-text("Oro") .row-main'); await h.wait(1200);
+  await p.tap('.sheet .btn-secondary:has-text("Editar")'); await h.wait(900);
+  assert.equal(await p.inputValue('#amt-qty'), '31,1034768');
+  await p.fill('#amt-qty', '62,2069536');
   await p.tap('.sheet-foot .btn-primary'); await h.wait(900);
   await p.keyboard.press('Escape'); await h.wait(900);
-  assert.equal((await h.stored()).holdings.find(x => x.id === BTC.id).qty, 2);
-  assert.equal(await h.balance(), '$204.000,00');
+  assert.ok(Math.abs((await h.stored()).holdings.find(x => x.id === 'metal:XAU').qty - 2) < 1e-6);
+  assert.equal(await h.balance(), '$108.000,00');
 
   // full swipe deletes, undo restores
   const rb = await p.locator('.row:has-text("Oro") .row-main').boundingBox();

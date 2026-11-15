@@ -174,3 +174,20 @@ test('suggested targets are steps of five that add up to 100', () => {
   }
   assert.equal(Object.values(suggest([], 0)).reduce((n, v) => n + v, 0), 0);
 });
+
+test('a second buy of a held asset becomes a trade; cash just adds up', () => {
+  const eth = { id: 'crypto:ethereum', kind: 'crypto', sym: 'ETH', name: 'Ethereum' };
+  S.addHolding(eth, 1, 2000);
+  assert.equal(S.getHolding(eth.id).tx, undefined, 'a first buy stays a plain position');
+  S.addHolding(eth, 1, 3000);
+  const h = S.getHolding(eth.id);
+  assert.equal(h.tx.length, 2);
+  assert.equal(h.tx[0].opening, true);
+  assert.equal(h.qty, 2);
+  assert.equal(h.cost, 2500);
+  const cash = { id: 'cash:USD', kind: 'cash', sym: 'USD', name: 'Cash' };
+  S.addHolding(cash, 100, null);
+  S.addHolding(cash, 50, null);
+  assert.equal(S.getHolding(cash.id).qty, 150);
+  assert.equal(S.getHolding(cash.id).tx, undefined);
+});

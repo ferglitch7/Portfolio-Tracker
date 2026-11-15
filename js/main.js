@@ -2,8 +2,9 @@
 
 import {
   state, subscribe, addHolding, updateHolding, removeHolding, restoreHolding,
-  setSetting, replaceAll, exportData, getHolding, enterDemo, exitDemo, isDemo,
+  setSetting, replaceAll, exportData, getHolding, enterDemo, exitDemo, isDemo, setTrades,
 } from './store.js';
+import { replay, sorted, openingOf, canTrade, heldAt, consistent, newId } from './trades.js';
 import * as P from './prices.js';
 import * as H from './history.js';
 import * as F from './format.js';
@@ -845,6 +846,138 @@ function amountView(sheet, asset, { edit = false } = {}) {
   return view;
 }
 
+// ---- one buy or sell -----------------------------------------------------------
+
+const dayInput = ts => { const d = new Date(ts); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+// A date picked without a time is kept at noon, so no time zone moves it a day.
+const fromDayInput = (v, fallback) => { const t = Date.parse(v + 'T12:00:00'); return Number.isFinite(t) ? t : fallback; };
+
+/**
+ * Record or change a trade. `trade` is null for a new one. Quantity and price
+ * are entered in the unit the position is shown in (grams, for gold in grams)
+ * and the display currency; they are stored per stored unit, in USD.
+ */
+function tradeView(sheet, id, trade, { side: side0 = 'buy' } = {}) {
+  const a = getHolding(id);
+  const isMetal = a.kind === 'metal';
+  const unit = isMetal && UNITS[a.unit] ? a.unit : 'oz';
+  const per = isMetal ? UNITS[unit].perOz : 1;
+  const unitLabel = isMetal ? UNITS[unit].label : a.sym;
+  const r = () => P.rate(ccy());
+  const opening = !!(trade && trade.opening);
+  let side = trade ? trade.side : side0;
+
+  const qtyInput = h('input.amt-input', { id: 'tr-qty', type: 'text', inputmode: 'decimal', placeholder: '0', autocomplete: 'off', 'aria-label': 'Cantidad' });
+  const priceInput = h('input.field-input', { id: 'tr-price', type: 'text', inputmode: 'decimal', autocomplete: 'off', placeholder: opening ? 'Opcional' : '0' });
+  const dateInput = h('input.field-input', { id: 'tr-date', type: 'date', max: dayInput(Date.now()), value: dayInput(trade && trade.t ? trade.t : Date.now()) });
+  const valueEl = h('div.amt-value');
+  const hint = h('p.hint', { style: { textAlign: 'center' } });
+  const btn = h('button.btn-primary', { type: 'button', text: trade ? 'Guardar' : 'Registrar', disabled: true });
+  const priceEl = h('div.amt-price');
+
+  if (trade) {
+    qtyInput.value = F.editable(trade.qty * per);
+    if (trade.price != null) priceInput.value = F.editable((trade.price * r()) / per);
+  } else {
+    const q = P.quoteOf(a);
+    if (q) priceInput.value = F.editable(Number(((q.p * r()) / per).toPrecision(8)));
+  }
+
+  const fit = () => {
+    const text = qtyInput.value || '0';
+    qtyInput.style.fontSize = text.length > 12 ? '28px' : text.length > 8 ? '38px' : '';
+    const cs = getComputedStyle(qtyInput);
+    if (!cs.fontSize) { qtyInput.style.width = `${text.length + 0.3}ch`; return; }
+    meter.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+    qtyInput.style.width = Math.ceil(meter.measureText(text).width + parseFloat(cs.fontSize) * 0.1) + 'px';
+  };
+
+  // The trades as they would be after saving.
+  function draft() {
+    const n = F.parseNumber(qtyInput.value), pv = F.parseNumber(priceInput.value);
+    const hasPrice = priceInput.value.trim() !== '' && pv >= 0;
+    if (!(n > 0)) return null;
+    if (!hasPrice && !opening) return null;
+    const t = opening ? (trade.t || null) : fromDayInput(dateInput.value, trade ? trade.t : Date.now());
+    const next = { id: trade ? trade.id : newId(), t, side: opening ? 'buy' : side, qty: n / per, price: hasPrice ? (pv / r()) * per : null, ...(opening ? { opening: true } : {}) };
+    const list = openingOf(getHolding(id)).filter(x => x.id !== next.id);
+    return { next, list: [...list, next] };
+  }
+
+  function refresh() {
+    const q = P.quoteOf(a);
+    priceEl.textContent = q ? `Hoy ${F.price((q.p * r()) / per, ccy())} / ${unitLabel}` : '';
+    const n = F.parseNumber(qtyInput.value), pv = F.parseNumber(priceInput.value);
+    valueEl.textContent = n > 0 && pv > 0 ? (side === 'sell' ? 'Recibes ' : 'Pagas ') + F.money(n * pv, ccy()) : '';
+    const d = draft();
+    let ok = !!d, msg = '';
+    if (d && !consistent(d.list)) {
+      ok = false;
+      const can = heldAt(openingOf(getHolding(id)), d.next.t, d.next.id) * per;
+      msg = side === 'sell' ? `En esa fecha tenías ${F.qty(can)} ${unitLabel}.` : 'Con este cambio una venta quedaría sin unidades.';
+    } else if (d && side === 'sell' && !opening) {
+      const before = replay(openingOf(getHolding(id)).filter(x => x.id !== d.next.id && (x.opening || (x.t || 0) <= d.next.t)));
+      if (before.cost != null && d.next.price != null) {
+        const g = (d.next.price - before.cost) * d.next.qty * r();
+        msg = `Ganancia de esta venta: ${F.signedMoney(g, ccy())}`;
+      }
+    }
+    hint.textContent = msg;
+    hint.hidden = !msg;
+    btn.disabled = !ok;
+  }
+
+  function save() {
+    const d = draft();
+    if (!d || !consistent(d.list)) return;
+    haptic(10);
+    setTrades(id, d.list);
+    sheet.pop();
+  }
+
+  const sideSeg = !opening && segmented([['buy', 'Compra'], ['sell', 'Venta']], side, v => { side = v; refresh(); });
+  qtyInput.addEventListener('input', () => { fit(); refresh(); });
+  priceInput.addEventListener('input', refresh);
+  dateInput.addEventListener('change', refresh);
+  btn.addEventListener('click', save);
+  for (const el of [qtyInput, priceInput]) el.addEventListener('keydown', e => { if (e.key === 'Enter' && !btn.disabled) save(); });
+
+  const remove = trade && h('button.btn-text.danger', {
+    type: 'button', text: 'Eliminar operación',
+    onclick: () => {
+      const list = openingOf(getHolding(id)).filter(x => x.id !== trade.id);
+      if (!consistent(list)) { toast('Antes borra la venta que depende de esta compra'); return; }
+      haptic(10);
+      setTrades(id, list);
+      sheet.pop();
+      toast('Operación eliminada', { action: { label: 'Deshacer', run: () => setTrades(id, [...list, trade]) } });
+    },
+  });
+
+  const view = makeView({
+    title: opening ? 'Posición inicial' : trade ? 'Operación' : 'Nueva operación',
+    body: [
+      sideSeg && sideSeg.el,
+      h('div.amt-top', null, logo(a), h('div.amt-name', { text: a.name }), priceEl),
+      h('div.amt-entry', null, h('div.amt-line', null, qtyInput, h('span.amt-unit', { text: unitLabel })), valueEl),
+      h('div.group', null,
+        h('label.field', null, h('span.field-label', { text: 'Precio' }), priceInput, h('span.field-suffix', { text: `${ccy()} / ${unitLabel}` })),
+        opening ? null : h('label.field', null, h('span.field-label', { text: 'Fecha' }), dateInput)),
+      hint,
+      opening ? h('p.hint', { text: 'Lo que ya tenías antes de registrar operaciones.', style: { textAlign: 'center' } }) : null,
+      remove ? h('div.detail-actions', null, remove) : null,
+    ],
+    foot: btn,
+  });
+  const off = P.onPrices(refresh);
+  view.onRemove = off;
+  view.onShow = fit;
+  view.focus = () => { fit(); try { qtyInput.focus({ preventScroll: true }); } catch { /* not focusable yet */ } };
+  fit();
+  refresh();
+  return view;
+}
+
 /**
  * A retirement plan: the balance as of today, the kind of account and, if
  * chosen, an index the balance follows until the next update.
@@ -955,6 +1088,13 @@ function openDetail(id, { edit = false } = {}) {
     h('button', { type: 'button', text: 'Añadir', onclick: () => openSettings() }));
   const statsGroup = h('div.group', { hidden: true });
   const planNote = h('p.hint');
+  const trades = canTrade(a0);
+  const vReal = fv();
+  const realRow = h('div.field', { hidden: true }, h('span.field-label', { text: 'Ganancia realizada' }), vReal);
+  const opsGroup = trades && h('div.group.ops');
+  const opsTitle = trades && h('div.group-title', { text: 'Operaciones' });
+  let opsSig = '';
+  const editBtn = h('button.btn-secondary', { type: 'button', text: 'Editar', onclick: () => pushEdit() });
   const fieldRow = (label, value) => h('div.field', null, h('span.field-label', { text: label }), value);
 
   function paint() {
@@ -998,7 +1138,44 @@ function openDetail(id, { edit = false } = {}) {
       vGain.className = 'field-value ' + (row.gainAbs > 0 ? 'up' : row.gainAbs < 0 ? 'down' : '');
     } else { vGain.textContent = '—'; vGain.className = 'field-value'; }
     vShare.textContent = row && row.value != null && v.total > 0 ? F.share(row.value / v.total) : '—';
+    if (trades) paintOps(a, r);
+    editBtn.hidden = !!a.tx;
     if (chart && range === '1D' && q && !scrub) chart.tick(q.p);
+  }
+
+  // Buys and sells, newest first. Rebuilt only when they or the currency change.
+  function paintOps(a, r) {
+    const res = replay(a.tx || []);
+    realRow.hidden = !res.realizedKnown;
+    if (res.realizedKnown) {
+      vReal.textContent = F.signedMoney(res.realized * r, ccy());
+      vReal.className = 'field-value ' + (res.realized > 0 ? 'up' : res.realized < 0 ? 'down' : '');
+    }
+    const sig = JSON.stringify([a.tx || null, a.unit, ccy(), r, state.settings.numbers]);
+    if (sig === opsSig) return;
+    opsSig = sig;
+    const per = a.kind === 'metal' && UNITS[a.unit] ? UNITS[a.unit].perOz : 1;
+    const unitLabel = a.kind === 'metal' ? (UNITS[a.unit] || UNITS.oz).label : a.sym;
+    const list = sorted(a.tx || []).reverse();
+    const rows = list.map(tr => {
+      const label = tr.opening ? 'Posición inicial' : tr.side === 'sell' ? 'Venta' : 'Compra';
+      const when = tr.t ? F.dateLabel(tr.t) : '';
+      const amount = `${tr.side === 'sell' ? '−' : '+'}${F.qty(tr.qty * per)} ${unitLabel}`;
+      const at = tr.price != null ? F.price((tr.price * r) / per, ccy()) : 'sin costo';
+      return h('button.field.op', { type: 'button', onclick: () => pushTrade(tr) },
+        h('span.op-main', null, h('span.op-kind' + (tr.side === 'sell' ? '.sell' : ''), { text: label }), h('span.op-when', { text: when })),
+        h('span.op-side', null, h('span.op-qty', { text: amount }), h('span.op-at', { text: at })),
+        h('span.chev', { html: ICONS.chevron }));
+    });
+    opsGroup.replaceChildren(...rows,
+      h('button.field.op-add', { type: 'button', onclick: () => pushTrade(null, 'buy') }, h('span.field-label', { text: 'Registrar compra' })),
+      a.qty > 0 ? h('button.field.op-add', { type: 'button', onclick: () => pushTrade(null, 'sell') }, h('span.field-label', { text: 'Registrar venta' })) : null);
+  }
+
+  function pushTrade(tr, side) {
+    const v = tradeView(sheet, id, tr, { side });
+    sheet.push(v);
+    if (!tr) v.focus();
   }
 
   async function load() {
@@ -1038,11 +1215,12 @@ function openDetail(id, { edit = false } = {}) {
       h('div.group', null,
         a0.kind !== 'custom' && a0.kind !== 'retire' && fieldRow('Cantidad', vQty), fieldRow('Valor', vVal),
         a0.kind !== 'cash' && fieldRow(a0.kind === 'custom' ? 'Costo' : a0.kind === 'retire' ? 'Total aportado' : 'Costo promedio', vCost),
-        a0.kind !== 'cash' && fieldRow('Ganancia', vGain), fieldRow('Peso', vShare)),
+        a0.kind !== 'cash' && fieldRow('Ganancia', vGain), trades && realRow, fieldRow('Peso', vShare)),
+      opsTitle, opsGroup,
       statsGroup,
       a0.kind === 'retire' && planNote,
       h('div.detail-actions', null,
-        h('button.btn-secondary', { type: 'button', text: 'Editar', onclick: () => pushEdit() }),
+        editBtn,
         h('button.btn-text.danger', { type: 'button', text: 'Eliminar', onclick: () => { sheet.close(); setTimeout(() => deleteHolding(id), 280); } })),
     ],
   });
@@ -1050,6 +1228,7 @@ function openDetail(id, { edit = false } = {}) {
   function pushEdit() {
     const a = getHolding(id);
     if (!a) return;
+    if (a.tx) return; // quantity comes from the trades, edited one by one below
     const v = amountView(sheet, a, { edit: true });
     sheet.push(v);
     v.focus();

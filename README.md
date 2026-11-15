@@ -2,8 +2,10 @@
 
 App web instalable (PWA) que valora tus posiciones al precio de mercado en
 vivo: crypto, acciones y ETFs de EE. UU., metales, efectivo y activos propios.
-Guardas cantidad y, si quieres, costo promedio; no hay historial de
-transacciones ni conexión a brokers o wallets.
+Guardas cantidad y, si quieres, costo promedio. En crypto, acciones y metales
+puedes además registrar compras y ventas con fecha: la cantidad y el costo
+promedio salen de ellas y se calcula la ganancia realizada. No hay conexión a
+brokers ni wallets.
 
 Son archivos estáticos: sin backend, sin build y sin nada corriendo en tu PC.
 Se publica con GitHub Pages desde la raíz de la rama `main`.
@@ -72,9 +74,11 @@ Límites conocidos:
 
 ## El gráfico del portfolio
 
-La app no guarda transacciones, así que los rangos 1D, 1S, 1M y 1A responden
+Los rangos 1D, 1S, 1M y 1A responden
 «¿cuánto habrían valido mis posiciones de hoy?»: cantidades actuales por el
-precio pasado de cada activo. Un activo sin histórico se mantiene plano y se
+precio pasado de cada activo. No usan las operaciones a propósito: si lo
+hicieran, una compra se vería como subida y el % dejaría de medir rendimiento.
+Un activo sin histórico se mantiene plano y se
 nombra bajo el gráfico.
 
 El rango **Real** dibuja el balance que la app registró de verdad (una foto

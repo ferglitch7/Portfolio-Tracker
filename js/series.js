@@ -1,9 +1,10 @@
 // Builds the portfolio's value over time. Pure functions: everything they need
 // is passed in, so the maths can be tested without a browser.
 //
-// The app stores no transactions, so the market ranges (1D, 1S, 1M, 1A) answer
-// "what would today's positions have been worth?": current quantities times
-// each asset's past price. The 'real' range is different: it replays the
+// The market ranges (1D, 1S, 1M, 1A) answer "what would today's positions have
+// been worth?": current quantities times each asset's past price. Recorded
+// trades are left out on purpose: a buy would show as a rise and the change
+// would stop measuring performance. The 'real' range is different: it replays the
 // values the app actually recorded while it was open.
 
 export const GRID = 120;

@@ -1,7 +1,11 @@
 // Holdings and settings, kept only in this browser (localStorage).
 //
 // A holding is one position per asset: quantity plus an optional average cost
-// per unit (USD). There is no transaction history by design.
+// per unit (USD). Crypto, stocks and metals can also keep their buys and sells
+// (holding.tx, see trades.js); then quantity and cost are the replay of those
+// trades and are never edited directly.
+
+import { replay, openingOf, canTrade, newId } from './trades.js';
 
 const KEY = 'portfolio.v1';
 
@@ -80,6 +84,12 @@ export function getHolding(id) { return state.holdings.find(h => h.id === id); }
  */
 export function addHolding(asset, qty, cost) {
   const cur = getHolding(asset.id);
+  if (cur && canTrade(cur)) {
+    // A second buy of something already held is recorded as a trade.
+    if (asset.unit) cur.unit = asset.unit;
+    setTrades(cur.id, [...openingOf(cur), { id: newId(), t: Date.now(), side: 'buy', qty, price: cost ?? null }]);
+    return;
+  }
   if (cur) {
     const total = cur.qty + qty;
     let avg = null;
@@ -92,6 +102,17 @@ export function addHolding(asset, qty, cost) {
   } else {
     state.holdings.push({ ...asset, qty, cost: cost ?? null, added: Date.now() });
   }
+  commit('holdings');
+}
+
+/** Replace the trades of a position; quantity and cost follow from them. */
+export function setTrades(id, trades) {
+  const h = getHolding(id);
+  if (!h) return;
+  const r = replay(trades);
+  h.tx = trades;
+  h.qty = r.qty;
+  h.cost = r.cost;
   commit('holdings');
 }
 

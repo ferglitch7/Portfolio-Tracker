@@ -467,6 +467,18 @@ button.field:active { background: var(--fill); }
 .field .logo { --logo: 28px; }
 .group-title { font-size: 11px; color: var(--label-2); text-transform: uppercase; letter-spacing: 0.02em; padding: 0 16px; margin-bottom: -8px; }
 
+/* ---- trades ---- */
+.op { min-height: 56px; text-align: left; }
+.op-main, .op-side { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.op-main { flex: 1; }
+.op-side { align-items: flex-end; font-variant-numeric: tabular-nums; }
+.op-kind { font-weight: 600; }
+.op-kind.sell { color: var(--down); }
+.op-when, .op-at { font-size: 12px; color: var(--label-2); }
+.op-qty { font-size: 14px; }
+.op-add .field-label { color: var(--tint); }
+.sheet-scroll > .seg:first-child { align-self: center; width: 220px; }
+
 /* ---- asset detail ---- */
 .detail-top { display: flex; align-items: center; gap: 12px; }
 .detail-top .logo { --logo: 46px; }
