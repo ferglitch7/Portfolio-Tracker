@@ -701,6 +701,15 @@ button.field:active { background: var(--fill); }
 .perf-tiles .perf-pct { font-size: 16px; }
 .perf-tiles .perf-abs { font-size: 12px; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 
+/* ---- currency badges ---- */
+.logo:has(.coin) { background: none; }
+.coin .coin-bg { fill: var(--coin-l); fill-opacity: 0.14; }
+.coin .coin-sym { fill: var(--coin-l); }
+@media (prefers-color-scheme: dark) {
+  .coin .coin-bg { fill: var(--coin-d); fill-opacity: 0.2; }
+  .coin .coin-sym { fill: var(--coin-d); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
 }

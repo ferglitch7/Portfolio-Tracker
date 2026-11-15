@@ -23,37 +23,32 @@ function metalBadge(sym) {
   </svg>`;
 }
 
-// Currency coins: a struck coin in a deep tone with a thin metallic rim and the
-// currency's symbol. The tone is a darkened colour from that country's flag, so
-// coins are told apart at a glance without showing flags.
+// Currency badges, iOS style: a soft tint of the currency's colour with its
+// symbol in that colour. Each colour has a deeper variant for the light theme
+// so the symbol keeps its contrast on a pale background.
+const TONE = {
+  green: ['#30d158', '#1f7a37'], blue: ['#0a84ff', '#0060c7'], purple: ['#bf5af2', '#8944ab'],
+  red: ['#ff453a', '#c9150c'], orange: ['#ff9f0a', '#b85000'], cyan: ['#40c8e0', '#00708a'],
+  pink: ['#ff375f', '#c4153d'], gray: ['#98989d', '#5c5c61'],
+};
 const COIN = {
-  USD: ['$', '#1f5f3f'], EUR: ['€', '#1d3f8f'], GBP: ['£', '#4a2c7a'], JPY: ['¥', '#8c1d24'],
-  CNY: ['元', '#8a2a14'], CHF: ['Fr', '#9a1f1f'], CAD: ['C$', '#8f1d2c'], AUD: ['A$', '#1f3a7a'],
-  NZD: ['NZ$', '#1c2f66'], MXN: ['MX$', '#0f5a3c'], BRL: ['R$', '#0f6b3a'], ARS: ['AR$', '#2a6aa8'],
-  COP: ['COL$', '#8a6a10'], CLP: ['CL$', '#1d3f8f'], PEN: ['S/', '#9a1f2a'], UYU: ['$U', '#2a5aa0'],
-  DOP: ['RD$', '#1d3a7a'], CRC: ['₡', '#1f3a8a'], GTQ: ['Q', '#2a7ab0'], HKD: ['HK$', '#9a1f2a'],
-  SGD: ['S$', '#a01f2a'], INR: ['₹', '#b0601a'], KRW: ['₩', '#1d3a7a'], SEK: ['kr', '#1f5a8f'],
-  NOK: ['kr', '#9a1f2a'], DKK: ['kr', '#a01f2a'], PLN: ['zł', '#a0283a'], TRY: ['₺', '#a01f24'],
-  ZAR: ['R', '#14603a'], AED: ['AED', '#3a3a3c'],
+  USD: ['$', 'green'], EUR: ['€', 'blue'], GBP: ['£', 'purple'], JPY: ['¥', 'red'],
+  CNY: ['元', 'red'], CHF: ['Fr', 'red'], CAD: ['C$', 'red'], AUD: ['A$', 'blue'],
+  NZD: ['NZ$', 'blue'], MXN: ['MX$', 'green'], BRL: ['R$', 'green'], ARS: ['AR$', 'cyan'],
+  COP: ['COL$', 'orange'], CLP: ['CL$', 'blue'], PEN: ['S/', 'red'], UYU: ['$U', 'blue'],
+  DOP: ['RD$', 'blue'], CRC: ['₡', 'blue'], GTQ: ['Q', 'cyan'], HKD: ['HK$', 'red'],
+  SGD: ['S$', 'red'], INR: ['₹', 'orange'], KRW: ['₩', 'blue'], SEK: ['kr', 'blue'],
+  NOK: ['kr', 'red'], DKK: ['kr', 'red'], PLN: ['zł', 'pink'], TRY: ['₺', 'red'],
+  ZAR: ['R', 'green'], AED: ['AED', 'gray'],
 };
 
 function coin(code) {
-  const [sym, tone] = COIN[code] || [code, '#3a3a3c'];
-  const id = 'coin-' + code;
+  const [sym, tone] = COIN[code] || [code, 'gray'];
+  const [dark, light] = TONE[tone];
   const size = sym.length >= 4 ? 11 : sym.length === 3 ? 13 : sym.length === 2 ? 16 : 21;
-  return `<svg viewBox="0 0 48 48" aria-hidden="true">
-    <defs>
-      <radialGradient id="${id}-f" cx="0.35" cy="0.28" r="0.9">
-        <stop offset="0" stop-color="${tone}" stop-opacity="0.78"/><stop offset="0.55" stop-color="${tone}"/><stop offset="1" stop-color="#0b0b0d" stop-opacity="0.9"/>
-      </radialGradient>
-      <linearGradient id="${id}-r" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0" stop-color="#f4f4f6"/><stop offset="0.45" stop-color="#8e8e93"/><stop offset="0.55" stop-color="#c7c7cc"/><stop offset="1" stop-color="#5a5a5f"/>
-      </linearGradient>
-    </defs>
-    <circle cx="24" cy="24" r="24" fill="url(#${id}-r)"/>
-    <circle cx="24" cy="24" r="22.2" fill="url(#${id}-f)"/>
-    <circle cx="24" cy="24" r="18.6" fill="none" stroke="#fff" stroke-opacity="0.22" stroke-width="0.8"/>
-    <text x="24" y="24" dy="0.36em" text-anchor="middle" font-size="${size}" font-weight="700" fill="#fff" fill-opacity="0.96" letter-spacing="-0.3" style="font-family:-apple-system,'SF Pro Display',system-ui,sans-serif">${sym}</text>
+  return `<svg class="coin" viewBox="0 0 48 48" aria-hidden="true" style="--coin-d:${dark};--coin-l:${light}">
+    <circle cx="24" cy="24" r="24" class="coin-bg"/>
+    <text x="24" y="24" dy="0.36em" text-anchor="middle" font-size="${size}" font-weight="700" class="coin-sym" letter-spacing="-0.3" style="font-family:-apple-system,'SF Pro Display',system-ui,sans-serif">${sym}</text>
   </svg>`;
 }
 
