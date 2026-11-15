@@ -758,7 +758,7 @@ function amountView(sheet, asset, { edit = false } = {}) {
   // The big number is exactly as wide as its text so the unit sits right after it.
   const fit = () => {
     const text = qtyInput.value || '0';
-    qtyInput.style.fontSize = text.length > 12 ? '29px' : text.length > 8 ? '39px' : '';
+    qtyInput.style.fontSize = text.length > 12 ? '28px' : text.length > 8 ? '38px' : '';
     const cs = getComputedStyle(qtyInput);
     if (!cs.fontSize) { qtyInput.style.width = `${text.length + 0.3}ch`; return; }
     meter.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
@@ -901,7 +901,7 @@ function retireView(sheet, asset, { edit = false } = {}) {
 
   const fit = () => {
     const text = qtyInput.value || '0';
-    qtyInput.style.fontSize = text.length > 12 ? '29px' : text.length > 8 ? '39px' : '';
+    qtyInput.style.fontSize = text.length > 12 ? '28px' : text.length > 8 ? '38px' : '';
     const cs = getComputedStyle(qtyInput);
     meter.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
     qtyInput.style.width = Math.ceil(meter.measureText(text).width + parseFloat(cs.fontSize) * 0.1) + 'px';
