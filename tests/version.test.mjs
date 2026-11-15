@@ -12,3 +12,9 @@ test('version.json matches the version in js/update.js', () => {
   assert.ok(m, 'APP_VERSION not found');
   assert.equal(json.version, m[1]);
 });
+
+test('the offline shell lists every script the app loads', () => {
+  const sw = fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
+  const scripts = fs.readdirSync(new URL('../js/', import.meta.url)).filter(f => f.endsWith('.js'));
+  for (const f of scripts) assert.ok(sw.includes(`'js/${f}'`), `sw.js SHELL misses js/${f}`);
+});

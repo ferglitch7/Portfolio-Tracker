@@ -75,6 +75,7 @@ function unitNow() {
 }
 
 function qtyLabel(a) {
+  if (a.tx && !(a.qty > 0)) return 'Posición cerrada';
   if (a.kind === 'metal') {
     const u = UNITS[a.unit] ? a.unit : 'oz';
     return `${F.qty(a.qty * UNITS[u].perOz)} ${UNITS[u].label}`;
@@ -299,7 +300,7 @@ function renderNotice() {
   const stocks = state.holdings.some(a => a.kind === 'stock');
   const st = P.stockState();
   let msg = null, label = null, action = null;
-  if (stocks && st !== 'ok') {
+  if (stocks && st !== 'ok' && !isDemo()) {
     msg = st === 'invalid' ? 'La llave de Finnhub no es válida' : 'Acciones sin precio en vivo';
     label = st === 'invalid' ? 'Revisar' : 'Conectar';
     action = () => openSettings();
@@ -361,12 +362,12 @@ function renderPerf(v) {
   // The best and worst asset of the selected period, by their own price change.
   const moves = [];
   if (sel === 'hoy') {
-    for (const r of v.rows) if (r.dayPct != null && r.a.kind !== 'cash') moves.push({ a: r.a, pct: r.dayPct });
+    for (const r of v.rows) if (r.dayPct != null && r.a.kind !== 'cash' && r.value > 0) moves.push({ a: r.a, pct: r.dayPct });
   } else {
   const span = H.RANGES[sel].span;
   for (const a of state.holdings) {
     const q = P.quoteOf(a), hist = H.peek(a, sel);
-    if (!q || !hist || hist.pts.length < 2) continue;
+    if (!q || !(a.qty > 0) || !hist || hist.pts.length < 2) continue;
     const then = priceAt(hist.pts, now - span);
     if (then > 0) moves.push({ a, pct: q.p / then - 1 });
   }
@@ -850,7 +851,7 @@ function amountView(sheet, asset, { edit = false } = {}) {
 
 const dayInput = ts => { const d = new Date(ts); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 // A date picked without a time is kept at noon, so no time zone moves it a day.
-const fromDayInput = (v, fallback) => { const t = Date.parse(v + 'T12:00:00'); return Number.isFinite(t) ? t : fallback; };
+const fromDayInput = (v, fallback) => { const t = Date.parse(v + 'T12:00:00'); return Number.isFinite(t) ? Math.min(t, Date.now()) : fallback; };
 
 /**
  * Record or change a trade. `trade` is null for a new one. Quantity and price
@@ -1424,7 +1425,7 @@ function openSettings() {
         fieldButton('Importar copia', { onclick: () => fileInput.click() }),
         wipe),
       fileInput,
-      h('p.hint', { text: 'Todo se guarda solo y al instante en este iPhone, con una segunda copia interna y versiones diarias. Si borras la app de la pantalla de inicio se pierde todo: guarda una copia en Archivos (iCloud Drive) de vez en cuando.' }),
+      h('p.hint', { text: 'Todo se guarda solo y al instante en este iPhone, con una segunda copia interna y versiones diarias. Si borras la app de la pantalla de inicio se pierde todo: guarda una copia en Archivos (iCloud Drive). Si hay cambios sin copiar, la app te lo recuerda cada semana.' }),
       h('p.hint', { text: 'Precios de Coinbase, CoinGecko, gold-api.com, Finnhub, Twelve Data y open.er-api.com.' }),
       h('p.hint.version', { text: `Versión ${APP_VERSION}` }),
     ],
@@ -1450,7 +1451,9 @@ function demoHoldings() {
     { ...s('NVDA'), qty: 30, cost: 96 },
     { ...s('VOO'), qty: 12, cost: 455 },
     { ...CASH_ITEM, qty: 5900, cost: null },
-  ].filter(x => x.id);
+  // Without a Finnhub key stocks have no price: leave them out rather than
+  // show an example that looks broken.
+  ].filter(x => x.id && (x.kind !== 'stock' || state.settings.finnhubKey));
 }
 
 // ============================================================================

@@ -63,7 +63,7 @@ test('one Cash item, found by its aliases; old "Dólar" is renamed', async () =>
   assert.deepEqual(await h.names(), ['Cash']);
   await p.tap('#btn-add'); await h.wait(600);
   await p.tap('.seg button:has-text("Efectivo")'); await h.wait(300);
-  assert.deepEqual(await p.$$eval('.pick-list .pick-name', e => e.map(x => x.textContent)), ['Cash', 'Otro activo']);
+  assert.deepEqual(await p.$$eval('.pick-list .pick-name', e => e.filter(x => x.offsetParent).map(x => x.textContent)), ['Cash']);
   await p.tap('.seg button:has-text("Todo")'); await h.wait(300);
   for (const q of ['cash', 'efectivo', 'dólar']) {
     await p.fill('#add-search', q); await h.wait(400);

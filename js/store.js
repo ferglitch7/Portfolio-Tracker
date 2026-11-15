@@ -29,7 +29,7 @@ function read() {
     const data = JSON.parse(raw);
     const d = defaults();
     return {
-      holdings: Array.isArray(data.holdings) ? data.holdings.filter(validHolding).map(renameCash) : [],
+      holdings: Array.isArray(data.holdings) ? data.holdings.filter(validHolding).map(normalize) : [],
       settings: { ...d.settings, ...(data.settings || {}) },
     };
   } catch {
@@ -40,6 +40,18 @@ function read() {
 // The dollar cash position is called "Cash" now.
 function renameCash(h) {
   return h.id === 'cash:USD' && h.name === 'Dólar' ? { ...h, name: 'Cash' } : h;
+}
+
+// Old names and anything malformed in an imported file: a bad trade list is
+// dropped (the position keeps its quantity), a good one is replayed.
+function normalize(h) {
+  h = renameCash(h);
+  if (!('tx' in h)) return h;
+  const ok = Array.isArray(h.tx) && canTrade(h) && h.tx.every(t => t && (t.side === 'buy' || t.side === 'sell') && Number.isFinite(t.qty) && t.qty > 0 && (t.price == null || Number.isFinite(t.price)));
+  const { tx, ...rest } = h;
+  if (!ok) return rest;
+  const r = replay(tx);
+  return { ...rest, tx, qty: r.qty, cost: r.cost };
 }
 
 function validHolding(h) {
@@ -144,7 +156,7 @@ export function setSetting(key, value) {
 export function replaceAll(data) {
   demo = false; savedHoldings = null;
   const d = defaults();
-  state.holdings = Array.isArray(data.holdings) ? data.holdings.filter(validHolding).map(renameCash) : [];
+  state.holdings = Array.isArray(data.holdings) ? data.holdings.filter(validHolding).map(normalize) : [];
   state.settings = { ...d.settings, ...state.settings, ...(data.settings || {}) };
   commit('holdings');
 }

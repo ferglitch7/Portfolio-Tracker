@@ -191,3 +191,13 @@ test('a second buy of a held asset becomes a trade; cash just adds up', () => {
   assert.equal(S.getHolding(cash.id).qty, 150);
   assert.equal(S.getHolding(cash.id).tx, undefined);
 });
+
+test('an imported file with a broken trade list keeps the position', () => {
+  S.replaceAll({ holdings: [
+    { id: 'crypto:bitcoin', kind: 'crypto', sym: 'BTC', name: 'Bitcoin', qty: 2, cost: 10, tx: 'oops' },
+    { id: 'crypto:ethereum', kind: 'crypto', sym: 'ETH', name: 'Ethereum', qty: 99, cost: null, tx: [{ id: 'a', t: 1, side: 'buy', qty: 3, price: 5 }] },
+  ] });
+  const btc = S.getHolding('crypto:bitcoin'), eth = S.getHolding('crypto:ethereum');
+  assert.equal(btc.tx, undefined); assert.equal(btc.qty, 2);
+  assert.equal(eth.qty, 3, 'quantity follows the trades'); assert.equal(eth.cost, 5);
+});

@@ -10,8 +10,12 @@ const METAL = {
   XPD: { el: 'Pd', stops: ['#F6F1EA', '#CFC3B4', '#93836F'], ink: '#4A3E30' },
 };
 
+// Symbols can come from an imported file: only letters reach the SVG markup.
+const safe = s => String(s || '').replace(/[^A-Za-z0-9]/g, '').slice(0, 5);
+
 function metalBadge(sym) {
-  const m = METAL[sym] || METAL.XAG;
+  sym = METAL[sym] ? sym : 'XAG';
+  const m = METAL[sym];
   const id = `metal-${sym}`;
   return `<svg viewBox="0 0 48 48" aria-hidden="true">
     <defs><linearGradient id="${id}" x1="0.1" y1="0" x2="0.9" y2="1">
@@ -43,7 +47,7 @@ const COIN = {
 };
 
 function coin(code) {
-  const [sym, tone] = COIN[code] || [code, 'gray'];
+  const [sym, tone] = COIN[code] || [safe(code), 'gray'];
   const [dark, light] = TONE[tone];
   const size = sym.length >= 4 ? 11 : sym.length === 3 ? 13 : sym.length === 2 ? 16 : 21;
   return `<svg class="coin" viewBox="0 0 48 48" aria-hidden="true" style="--coin-d:${dark};--coin-l:${light}">
