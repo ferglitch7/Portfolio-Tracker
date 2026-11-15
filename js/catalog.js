@@ -77,6 +77,10 @@ export const STOCKS = [
   S('ARKK', 'ARK Innovation'), S('EWW', 'iShares MSCI Mexico'), S('EEM', 'iShares Emerging Markets'), S('VNQ', 'Vanguard Real Estate'), S('SMH', 'VanEck Semiconductor'),
 ];
 
+// One cash asset to add: "Cash", shown with the $ badge. The full currency list
+// (CASH) stays for choosing the display currency in Settings.
+export const CASH_ITEM = { id: 'cash:USD', kind: 'cash', sym: 'USD', name: 'Cash', flag: 'us' };
+
 export const CASH = Object.entries(CURRENCIES).map(([code, c]) => ({
   id: `cash:${code}`, kind: 'cash', sym: code, name: c.name, flag: c.flag,
 }));
@@ -88,8 +92,11 @@ export function newCustomAsset(name) {
 
 const norm = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 
+const ALIASES = { 'cash:USD': ['efectivo', 'dolar', 'dinero', 'usd'] };
+
 function rank(asset, q) {
   const sym = norm(asset.sym), name = norm(asset.name);
+  if ((ALIASES[asset.id] || []).some(w => w.startsWith(q))) return 2;
   if (sym === q) return 0;
   if (sym.startsWith(q)) return 1;
   if (name.startsWith(q)) return 2;
@@ -101,12 +108,12 @@ function rank(asset, q) {
 export function searchLocal(query, kind = 'all') {
   const q = norm(query.trim());
   const pools = kind === 'all'
-    ? [CRYPTO, STOCKS, METALS, CASH, RETIRE]
-    : [{ crypto: CRYPTO, stock: STOCKS, metal: METALS, cash: CASH, retire: RETIRE }[kind] || []];
+    ? [CRYPTO, STOCKS, METALS, [CASH_ITEM], RETIRE]
+    : [{ crypto: CRYPTO, stock: STOCKS, metal: METALS, cash: [CASH_ITEM], retire: RETIRE }[kind] || []];
   if (!q) {
     if (kind !== 'all') return pools[0].slice(0, 60);
     // A mixed starting list: the names people reach for first in each class.
-    return [...CRYPTO.slice(0, 2), METALS[0], ...STOCKS.slice(0, 3), METALS[1], ...CRYPTO.slice(5, 7), STOCKS[50], STOCKS[53], CASH[0], CASH[1]];
+    return [...CRYPTO.slice(0, 2), METALS[0], ...STOCKS.slice(0, 3), METALS[1], ...CRYPTO.slice(5, 7), STOCKS[50], STOCKS[53], CASH_ITEM];
   }
   const hits = [];
   pools.forEach((pool, pi) => pool.forEach((a, i) => {

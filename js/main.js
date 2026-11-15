@@ -7,7 +7,7 @@ import {
 import * as P from './prices.js';
 import * as H from './history.js';
 import * as F from './format.js';
-import { KINDS, UNITS, METALS, CRYPTO, STOCKS, CASH, searchLocal, searchRemote, newCustomAsset, newRetireAccount, TRACKS, ACCOUNT_TYPES } from './catalog.js';
+import { KINDS, UNITS, METALS, CRYPTO, STOCKS, CASH, CASH_ITEM, searchLocal, searchRemote, newCustomAsset, newRetireAccount, TRACKS, ACCOUNT_TYPES } from './catalog.js';
 import { h, spring, pan, rubber, haptic, ICONS, reduceMotion } from './motion.js';
 import { logo } from './logo.js';
 import { createChart } from './chart.js';
@@ -693,7 +693,7 @@ function hideSplash() {
 
 function pickRow(a, onPick, { all }) {
   const held = getHolding(a.id);
-  const sub = a.kind === 'retire' ? (a.template ? '401(k), IRA, Roth, pensión' : qtyLabel(a)) : all && a.kind !== 'cash' ? `${a.sym} · ${KINDS[a.kind].label}` : a.sym;
+  const sub = a.kind === 'retire' ? (a.template ? '401(k), IRA, Roth, pensión' : qtyLabel(a)) : a.kind === 'cash' ? 'Efectivo' : all ? `${a.sym} · ${KINDS[a.kind].label}` : a.sym;
   return h('button.pick', { type: 'button', onclick: onPick },
     logo(a),
     h('div.pick-mid', null, h('div.pick-name', { text: a.name }), h('div.pick-sub', { text: sub })),
@@ -1276,7 +1276,6 @@ function openSettings() {
 function demoHoldings() {
   const c = id => CRYPTO.find(a => a.cg === id);
   const s = sym => STOCKS.find(a => a.sym === sym);
-  const m = code => CASH.find(a => a.sym === code);
   return [
     { ...c('bitcoin'), qty: 0.42, cost: 52000 },
     { ...c('ethereum'), qty: 3.5, cost: 2900 },
@@ -1286,8 +1285,7 @@ function demoHoldings() {
     { ...s('AAPL'), qty: 25, cost: 182 },
     { ...s('NVDA'), qty: 30, cost: 96 },
     { ...s('VOO'), qty: 12, cost: 455 },
-    { ...m('USD'), qty: 4200, cost: null },
-    { ...m('EUR'), qty: 1500, cost: null },
+    { ...CASH_ITEM, qty: 5900, cost: null },
   ].filter(x => x.id);
 }
 
@@ -1324,7 +1322,7 @@ $('change').addEventListener('click', () => {
   haptic(5);
   scheduleRender(true);
 });
-$('empty-logos').append(logo(CRYPTO[0]), logo(METALS[0]), logo(STOCKS[0]), logo(CASH[0]));
+$('empty-logos').append(logo(CRYPTO[0]), logo(METALS[0]), logo(STOCKS[0]), logo(CASH_ITEM));
 
 // Balance: a tap changes the unit (currency → bitcoin → gold), a long press hides it.
 {

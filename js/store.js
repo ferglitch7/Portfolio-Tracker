@@ -25,12 +25,17 @@ function read() {
     const data = JSON.parse(raw);
     const d = defaults();
     return {
-      holdings: Array.isArray(data.holdings) ? data.holdings.filter(validHolding) : [],
+      holdings: Array.isArray(data.holdings) ? data.holdings.filter(validHolding).map(renameCash) : [],
       settings: { ...d.settings, ...(data.settings || {}) },
     };
   } catch {
     return defaults();
   }
+}
+
+// The dollar cash position is called "Cash" now.
+function renameCash(h) {
+  return h.id === 'cash:USD' && h.name === 'Dólar' ? { ...h, name: 'Cash' } : h;
 }
 
 function validHolding(h) {
@@ -118,7 +123,7 @@ export function setSetting(key, value) {
 export function replaceAll(data) {
   demo = false; savedHoldings = null;
   const d = defaults();
-  state.holdings = Array.isArray(data.holdings) ? data.holdings.filter(validHolding) : [];
+  state.holdings = Array.isArray(data.holdings) ? data.holdings.filter(validHolding).map(renameCash) : [];
   state.settings = { ...d.settings, ...state.settings, ...(data.settings || {}) };
   commit('holdings');
 }
