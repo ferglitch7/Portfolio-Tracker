@@ -28,6 +28,20 @@ Sube el mismo número de versión en `version.json` y en `js/update.js`
 (`node --test` falla si no coinciden) y haz push a `main`. GitHub Pages publica
 en uno o dos minutos y la app instalada se actualiza al abrirla.
 
+## Pruebas
+
+```
+node --test                          # lógica, menos de 1 s
+node --test 'tests/e2e/*.e2e.cjs'    # la app en un navegador, ~1 min
+```
+
+Las de navegador necesitan Playwright con Chromium. Abren la app con tamaño de
+iPhone, tocan como un dedo (deslizar, arrastrar, mantener) y comprueban
+importes, guardado, copias y modo sin conexión. El mercado es simulado
+(`tests/e2e/harness.cjs`): ninguna petición sale a internet, así que el
+resultado no depende de la red ni de lo que hizo el precio hoy. Córrelas antes
+de publicar.
+
 ## De dónde salen los datos
 
 | Clase | Precio en vivo | Histórico (gráficos) | Llave |
@@ -121,4 +135,5 @@ js/logo.js       logos con alternativa si no cargan
 tools/build-catalog.mjs   regenera js/catalog-data.js (top 100 de crypto)
 tools/make-images.cjs     regenera iconos e imágenes de arranque
 tests/                    pruebas de la lógica: node --test
+tests/e2e/                pruebas en navegador con mercado simulado
 ```
