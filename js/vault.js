@@ -123,6 +123,7 @@ export async function versions() {
 
 const EXPORTED_KEY = 'portfolio.exported';
 const SINCE_KEY = 'portfolio.since';
+const SIG_KEY = 'portfolio.exportedSig';
 
 const num = k => { try { return Number(localStorage.getItem(k)) || 0; } catch { return 0; } };
 const setNum = (k, v) => { try { localStorage.setItem(k, String(v)); } catch { /* not kept */ } };
@@ -134,16 +135,31 @@ export function markSince(hasHoldings) {
   if (hasHoldings && !num(SINCE_KEY)) setNum(SINCE_KEY, Date.now());
 }
 
+/** A short fingerprint of what a copy holds, to tell whether anything changed. */
+export function signature(text) {
+  let h = 5381;
+  for (let i = 0; i < text.length; i++) h = ((h << 5) + h + text.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(36) + ':' + text.length;
+}
+
 /**
  * Days without a copy outside the device, once that is worth a reminder:
- * three days after first use if never saved, otherwise thirty days after the
- * last copy. Null when no reminder is due.
+ * three days after first use if never saved, otherwise a week after the last
+ * copy, but only if the portfolio changed since (`sig`, see signature()).
+ * Null when no reminder is due.
  */
-export function backupDue(now = Date.now()) {
+export function backupDue(now = Date.now(), sig = null) {
   const since = num(SINCE_KEY), last = num(EXPORTED_KEY);
   if (!since) return null;
   if (!last) return now - since > 3 * DAY ? Math.floor((now - since) / DAY) : null;
-  return now - last > 30 * DAY ? Math.floor((now - last) / DAY) : null;
+  if (sig && sig === readSig()) return null;
+  return now - last > 7 * DAY ? Math.floor((now - last) / DAY) : null;
+}
+
+function readSig() { try { return localStorage.getItem(SIG_KEY); } catch { return null; } }
+function exported(sig) {
+  setNum(EXPORTED_KEY, Date.now());
+  try { if (sig) localStorage.setItem(SIG_KEY, sig); } catch { /* not kept */ }
 }
 
 /**
@@ -151,14 +167,14 @@ export function backupDue(now = Date.now()) {
  * "Guardar en Archivos" puts it in iCloud Drive; elsewhere it downloads the
  * file. Must run from a tap. Resolves to true once the copy was handed over.
  */
-export async function saveFile(text) {
+export async function saveFile(text, sig = null) {
   const name = `portfolio-${localDay(Date.now())}.json`;
   const blob = new Blob([text], { type: 'application/json' });
   try {
     const file = new File([blob], name, { type: 'application/json' });
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
       await navigator.share({ files: [file], title: 'Copia de Portfolio' });
-      setNum(EXPORTED_KEY, Date.now());
+      exported(sig);
       return true;
     }
   } catch (e) {
@@ -169,6 +185,6 @@ export async function saveFile(text) {
   a.href = url; a.download = name;
   document.body.append(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 2000);
-  setNum(EXPORTED_KEY, Date.now());
+  exported(sig);
   return true;
 }

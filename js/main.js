@@ -2,7 +2,7 @@
 
 import {
   state, subscribe, addHolding, updateHolding, removeHolding, restoreHolding,
-  setSetting, replaceAll, exportData, getHolding, enterDemo, exitDemo, isDemo, setTrades,
+  setSetting, replaceAll, exportData, exportObject, getHolding, enterDemo, exitDemo, isDemo, setTrades,
 } from './store.js';
 import { replay, sorted, openingOf, canTrade, heldAt, consistent, newId } from './trades.js';
 import * as P from './prices.js';
@@ -304,7 +304,7 @@ function renderNotice() {
     label = st === 'invalid' ? 'Revisar' : 'Conectar';
     action = () => openSettings();
   } else if (state.holdings.length && !isDemo()) {
-    const days = V.backupDue();
+    const days = V.backupDue(Date.now(), copySig());
     if (days != null) {
       msg = V.lastExport() ? `Sin copia fuera del iPhone desde hace ${days} días` : 'Aún no tienes una copia fuera del iPhone';
       label = 'Guardar';
@@ -1305,8 +1305,14 @@ function mirrorNow() {
   if (!isDemo()) V.mirror(vaultDoc());
 }
 
+// What a copy protects: positions, trades and plans; not prices or the date.
+function copySig() {
+  const { holdings, settings } = exportObject();
+  return V.signature(JSON.stringify([holdings, settings]));
+}
+
 async function saveCopy() {
-  const ok = await V.saveFile(exportData({ snapshots: snapshots() }));
+  const ok = await V.saveFile(exportData({ snapshots: snapshots() }), copySig());
   if (ok) { haptic(10); toast('Copia guardada'); scheduleRender(true); }
 }
 
