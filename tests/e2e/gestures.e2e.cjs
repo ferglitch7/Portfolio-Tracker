@@ -100,3 +100,13 @@ test('hold and drag reorders; order persists; "sort by value" restores it', asyn
   assert.deepEqual(h.errors, []);
   await h.close();
 });
+
+test('trend lines line up in one column whatever the amount width', async () => {
+  const XRP = { id: 'crypto:ripple', kind: 'crypto', sym: 'XRP', name: 'XRP', cg: 'ripple', cb: 'XRP-USD', qty: 34.63, cost: null };
+  const h = await phone(env, { seed: { holdings: [BTC, XRP, GOLD, CASH], settings: {} } });
+  await h.wait(3500);
+  const xs = await h.p.$$eval('#list .spark.on', s => s.map(e => Math.round(e.getBoundingClientRect().left)));
+  assert.ok(xs.length >= 3, `sparklines drawn: ${xs.length}`);
+  assert.equal(new Set(xs).size, 1, `same x for all: ${xs}`);
+  await h.close();
+});

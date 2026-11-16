@@ -39,6 +39,7 @@ const MARKET = {
   'BTC-USD': { now: 100000, open: 98000 },
   'ETH-USD': { now: 3000, open: 3060 },
   'SOL-USD': { now: 150, open: 145 },
+  'XRP-USD': { now: 0.955, open: 0.958 },
   'PAXG-USD': { now: 4010, open: 3990 },
   XAU: { now: 4000 }, XAG: { now: 50 }, XPT: { now: 1500 }, XPD: { now: 1200 },
   AAPL: { now: 200, open: 198 }, VOO: { now: 610, open: 605 }, SLV: { now: 46, open: 45 },

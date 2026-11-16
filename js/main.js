@@ -617,6 +617,11 @@ function renderList(v) {
   }
   // Long amounts leave no room for the trend line on a phone.
   list.classList.toggle('no-spark', longest > 11 && list.clientWidth < 440);
+  // Every amount column as wide as the widest, so the trend lines line up.
+  let endW = 0;
+  for (const { row } of order) endW = Math.max(endW, row.val.scrollWidth, row.chg.scrollWidth);
+  const endPx = endW ? Math.ceil(endW) + 'px' : '';
+  if (list.style.getPropertyValue('--end-w') !== endPx) list.style.setProperty('--end-w', endPx);
 
   const current = [...list.children];
   const same = current.length === order.length && order.every((o, i) => current[i] === o.row.el);
