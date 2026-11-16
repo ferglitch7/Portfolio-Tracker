@@ -102,3 +102,34 @@ test('example mode never saves anything', async () => {
   assert.equal(((await h.stored()).holdings || []).length, 0);
   await h.close();
 });
+
+test('with the keyboard up, entry screens fit and the typed field stays in view', async () => {
+  const h = await phone(env, { seed: { holdings: [BTC, GOLD, CASH], settings: {} } });
+  const { p } = h;
+  await h.wait(2500);
+  // what sheet.js does when iOS reports the keyboard (~381 pt on a 6.3" iPhone)
+  const keyboard = () => p.evaluate(() => { const l = document.getElementById('sheets'); l.style.bottom = '381px'; l.classList.add('kb'); });
+  const fits = () => p.evaluate(() => {
+    const v = [...document.querySelectorAll('.sheet-view')].pop(), sc = v.querySelector('.sheet-scroll').getBoundingClientRect();
+    return [...v.querySelectorAll('.amt-input, .field-input')].filter(e => e.offsetParent)
+      .filter(e => { const b = e.getBoundingClientRect(); return b.top < sc.top - 1 || b.bottom > sc.bottom + 1; }).map(e => e.id);
+  });
+  await p.tap('.row:has-text("Oro") .row-main'); await h.wait(1200);
+  await p.tap('.op-add:has-text("Registrar compra")'); await h.wait(900);
+  await keyboard(); await h.wait(300);
+  assert.deepEqual(await fits(), [], 'trade screen');
+  await p.evaluate(() => { const l = document.getElementById('sheets'); l.style.bottom = '0px'; l.classList.remove('kb'); });
+  await p.tap('.sheet-view:last-child .back'); await h.wait(800);
+  await p.tap('.sheet .btn-secondary:has-text("Editar")'); await h.wait(900);
+  await keyboard(); await h.wait(300);
+  assert.deepEqual(await fits(), [], 'edit screen');
+  await h.close();
+
+  const g = await phone(env, { seed: { holdings: [BTC], settings: {} } });
+  await g.wait(2500);
+  await g.p.tap('#goal'); await g.wait(1200);
+  await g.p.evaluate(() => { const l = document.getElementById('sheets'); l.style.bottom = '381px'; l.classList.add('kb'); });
+  await g.p.focus('#goal-amount'); await g.wait(400);
+  assert.ok(await g.p.evaluate(() => { const e = document.getElementById('goal-amount'), sc = e.closest('.sheet-scroll').getBoundingClientRect(), b = e.getBoundingClientRect(); return b.top >= sc.top - 1 && b.bottom <= sc.bottom + 1; }), 'focused goal field scrolled into view');
+  await g.close();
+});

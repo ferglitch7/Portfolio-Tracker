@@ -187,8 +187,27 @@ if (typeof visualViewport !== 'undefined' && visualViewport) {
     if (!layer || !app) return;
     const full = app.getBoundingClientRect().height;
     const covered = full - (visualViewport.offsetTop + visualViewport.height);
-    layer.style.bottom = covered > 120 ? covered + 'px' : '0px';
+    const open = covered > 120;
+    layer.style.bottom = open ? covered + 'px' : '0px';
+    // With the keyboard up only about half the screen is left: sheets switch to
+    // a compact layout (styles.css, #sheets.kb) and keep the field being typed in view.
+    const was = layer.classList.contains('kb');
+    layer.classList.toggle('kb', open);
+    if (open !== was) {
+      // Big amount fields size themselves to their text: measure again at the new size.
+      layer.querySelectorAll('.amt-input').forEach(el => el.dispatchEvent(new Event('input')));
+      if (open) requestAnimationFrame(() => revealFocused());
+    }
   };
+  const revealFocused = () => {
+    const el = document.activeElement;
+    if (!el || !el.closest || !el.closest('.sheet-scroll')) return;
+    el.scrollIntoView({ block: 'nearest' });
+  };
+  document.addEventListener('focusin', () => {
+    const layer = document.getElementById('sheets');
+    if (layer && layer.classList.contains('kb')) setTimeout(revealFocused, 50);
+  });
   visualViewport.addEventListener('resize', fit);
   visualViewport.addEventListener('scroll', fit);
 }

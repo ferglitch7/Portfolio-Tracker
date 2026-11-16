@@ -379,6 +379,28 @@ svg { display: block; }
 .sheet-scroll > * { flex: none; }
 .sheet-foot { flex: none; padding: 10px 16px calc(var(--safe-b) + 14px); display: flex; flex-direction: column; gap: 4px; }
 
+/* Keyboard up (sheet.js adds .kb): about half the screen is left, so the
+   entry screens drop to a compact layout and the sheet runs under the keyboard. */
+#sheets.kb .sheet::after { content: ""; position: absolute; left: 0; right: 0; top: 100%; height: 120px; background: var(--sheet); }
+#sheets.kb .sheet-grabber { height: 10px; }
+#sheets.kb .sheet-head { padding-bottom: 4px; }
+#sheets.kb .sheet-scroll { gap: 10px; padding-bottom: 12px; }
+#sheets.kb .sheet-foot { padding: 6px 16px 8px; }
+#sheets.kb .sheet-foot .btn-primary { height: 46px; min-height: 46px; }
+#sheets.kb .amt-top { flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: center; gap: 4px 8px; padding-top: 0; }
+#sheets.kb .amt-top .logo { --logo: 26px; margin-bottom: 0; }
+#sheets.kb .amt-name { font-size: 16px; }
+#sheets.kb .amt-price { min-height: 0; width: 100%; font-size: 12px; }
+#sheets.kb .amt-price:empty { display: none; }
+#sheets.kb .amt-entry { padding: 0; gap: 2px; }
+#sheets.kb .amt-input { font-size: 40px; }
+#sheets.kb .amt-unit { font-size: 17px; }
+#sheets.kb .amt-value { min-height: 18px; font-size: 13px; }
+#sheets.kb .amt-entry .seg { margin-top: 4px; }
+#sheets.kb .field { min-height: 44px; }
+#sheets.kb .field-input { height: 44px; }
+#sheets.kb .hint { font-size: 10.5px; }
+
 @media (min-width: 641px) {
   .sheet-layer { align-items: center; }
   .sheet { height: min(820px, calc(100% - 64px)); border-radius: 26px; }
