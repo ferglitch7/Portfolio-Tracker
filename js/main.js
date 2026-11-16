@@ -3,8 +3,9 @@
 import {
   state, subscribe, addHolding, updateHolding, removeHolding, restoreHolding,
   setSetting, replaceAll, exportData, exportObject, getHolding, enterDemo, exitDemo, isDemo, setTrades,
+  accrueInterest, setApy,
 } from './store.js';
-import { replay, sorted, openingOf, canTrade, canIncome, hasHistory, heldAt, consistent, newId, INCOME, incomeOf, incomeSince } from './trades.js';
+import { replay, sorted, openingOf, canTrade, canIncome, hasHistory, heldAt, consistent, newId, INCOME, incomeOf, incomeSince, addMonth, monthlyRate } from './trades.js';
 import * as P from './prices.js';
 import * as H from './history.js';
 import * as F from './format.js';
@@ -28,6 +29,16 @@ const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const EASE = 'cubic-bezier(0.2, 0.8, 0.2, 1)';
 const RANGE_LABEL = { '1D': '24 h', '1S': '7 días', '1M': '30 días', '1A': '1 año' };
 const meter = document.createElement('canvas').getContext('2d');
+
+// A big amount input is exactly as wide as its text, so its unit sits right after it.
+function fitInput(input) {
+  const text = input.value || '0';
+  input.style.fontSize = text.length > 12 ? '28px' : text.length > 8 ? '38px' : '';
+  const cs = getComputedStyle(input);
+  if (!cs.fontSize) { input.style.width = `${text.length + 0.3}ch`; return; }
+  meter.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+  input.style.width = Math.ceil(meter.measureText(text).width + parseFloat(cs.fontSize) * 0.1) + 'px';
+}
 
 // The balance can also be counted in bitcoin or in ounces of gold; both are
 // followed all the time so switching is instant.
@@ -1031,6 +1042,47 @@ function tradeView(sheet, id, trade, { side: side0 = 'buy' } = {}) {
   return view;
 }
 
+/** The annual yield a cash balance earns (a savings account). */
+function apyView(sheet, id) {
+  const a = getHolding(id);
+  const r = () => P.rate(ccy());
+  const input = h('input.amt-input', { id: 'apy-input', type: 'text', inputmode: 'decimal', placeholder: '0', autocomplete: 'off', 'aria-label': 'Interés anual' });
+  if (a.apy > 0) input.value = F.editable(a.apy);
+  const est = h('div.amt-value');
+  const btn = h('button.btn-primary', { type: 'button', text: 'Guardar', disabled: true });
+  const priceOf = x => { const q = P.quoteOf(x); return q ? q.p : null; };
+  const refresh = () => {
+    fitInput(input);
+    const n = F.parseNumber(input.value), q = P.quoteOf(a);
+    btn.disabled = !(n >= 0 && n < 100);
+    est.textContent = n > 0 && q ? `≈ ${F.money(a.qty * monthlyRate(n) * q.p * r(), ccy())} al mes · ${F.money(a.qty * (n / 100) * q.p * r(), ccy())} al año` : '';
+  };
+  const save = () => {
+    const n = F.parseNumber(input.value);
+    if (!(n >= 0 && n < 100)) return;
+    haptic(10);
+    setApy(id, n, priceOf);
+    sheet.pop();
+  };
+  input.addEventListener('input', refresh);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter' && !btn.disabled) save(); });
+  btn.addEventListener('click', save);
+  const view = makeView({
+    title: 'Interés anual',
+    body: [
+      h('div.amt-top', null, logo(a), h('div.amt-name', { text: a.name })),
+      h('div.amt-entry', null, h('div.amt-line', null, input, h('span.amt-unit', { text: '%' })), est),
+      h('p.hint', { style: { textAlign: 'center' }, text: 'La tasa anual (APY) de tu cuenta de ahorro. Cada mes, en la fecha de hoy, la app suma al saldo el interés de ese mes. Si el banco cambia la tasa, cámbiala aquí.' }),
+      a.apy > 0 ? h('div.detail-actions', null, h('button.btn-text.danger', { type: 'button', text: 'Quitar interés', onclick: () => { haptic(10); setApy(id, 0, priceOf); sheet.pop(); } })) : null,
+    ],
+    foot: btn,
+  });
+  view.onShow = () => fitInput(input);
+  view.focus = () => { fitInput(input); try { input.focus({ preventScroll: true }); } catch { /* not focusable yet */ } };
+  refresh();
+  return view;
+}
+
 /**
  * A retirement plan: the balance as of today, the kind of account and, if
  * chosen, an index the balance follows until the next update.
@@ -1130,7 +1182,7 @@ function openDetail(id, { edit = false } = {}) {
   const pill = h('span.pill');
   const meta = h('span');
   const fv = () => h('span.field-value');
-  const vQty = fv(), vVal = fv(), vCost = fv(), vGain = fv(), vShare = fv();
+  const vQty = fv(), vVal = fv(), vCost = fv(), vGain = fv();
   vVal.classList.add('strong');
   const nameEl = h('div.detail-name'), symEl = h('div.detail-sym');
   const chartHost = avail === 'yes' ? h('div', { 'data-nodrag': '' }) : null;
@@ -1149,6 +1201,10 @@ function openDetail(id, { edit = false } = {}) {
   const opsGroup = trades && h('div.group.ops');
   const opsTitle = trades && h('div.group-title', { text: a0.kind === 'cash' ? 'Movimientos' : 'Operaciones' });
   let opsSig = '';
+  const vApy = fv(), apyNote = h('p.hint');
+  const apyGroup = a0.kind === 'cash' && h('div.group', null,
+    h('button.field', { type: 'button', id: 'apy-field', onclick: () => { const v = apyView(sheet, id); sheet.push(v); v.focus(); } },
+      h('span.field-label', { text: 'Interés anual' }), vApy, h('span.chev', { html: ICONS.chevron })));
   const editBtn = h('button.btn-secondary', { type: 'button', text: 'Editar', onclick: () => pushEdit() });
   const fieldRow = (label, value) => h('div.field', null, h('span.field-label', { text: label }), value);
 
@@ -1176,7 +1232,8 @@ function openDetail(id, { edit = false } = {}) {
       pill.hidden = false;
       meta.textContent = F.timeLabel(scrub.t, range);
     } else {
-      big.textContent = q ? F.price(q.p * r, ccy()) : '—';
+      // Cash has no price worth showing: its balance is the number.
+      big.textContent = !q ? '—' : a.kind === 'cash' ? F.money(q.p * a.qty * r, ccy()) : F.price(q.p * r, ccy());
       const first = chart && chart.first;
       const ratio = q && first ? q.p / first - 1 : row && row.dayPct;
       pill.hidden = ratio == null;
@@ -1192,8 +1249,16 @@ function openDetail(id, { edit = false } = {}) {
       vGain.textContent = `${F.signedMoney(row.gainAbs, ccy())}  ${F.pct(row.gainPct)}`;
       vGain.className = 'field-value ' + (row.gainAbs > 0 ? 'up' : row.gainAbs < 0 ? 'down' : '');
     } else { vGain.textContent = '—'; vGain.className = 'field-value'; }
-    vShare.textContent = row && row.value != null && v.total > 0 ? F.share(row.value / v.total) : '—';
     if (trades) paintOps(a, r);
+    if (apyGroup) {
+      vApy.textContent = a.apy > 0 ? F.num(a.apy, 2) + ' %' : 'Añadir';
+      const q = P.quoteOf(a);
+      apyNote.hidden = !(a.apy > 0 && q);
+      if (!apyNote.hidden) {
+        const next = addMonth(a.apyFrom), est = a.qty * monthlyRate(a.apy) * q.p * r;
+        apyNote.textContent = `Próximo abono el ${F.dateLabel(next)}: unos ${F.money(est, ccy())}. Se suma solo al saldo cada mes.`;
+      }
+    }
     editBtn.hidden = !!a.tx && a.kind !== 'cash'; // cash keeps "Editar" for its balance
     if (chart && range === '1D' && q && !scrub) chart.tick(q.p);
   }
@@ -1228,10 +1293,13 @@ function openDetail(id, { edit = false } = {}) {
         h('span.chev', { html: ICONS.chevron }));
     });
     const add = (label, side) => h('button.field.op-add', { type: 'button', onclick: () => pushTrade(null, side) }, h('span.field-label', { text: label }));
-    opsGroup.replaceChildren(...rows,
+    // Cash earns through its annual rate (see apyView), not entry by entry.
+    opsGroup.replaceChildren(...[...rows,
       canTrade(a) ? add('Registrar compra', 'buy') : null,
       canTrade(a) && a.qty > 0 ? add('Registrar venta', 'sell') : null,
-      canIncome(a) ? add(`Registrar ${INCOME[a.kind].toLowerCase()}`, 'income') : null);
+      canIncome(a) && !isCash ? add(`Registrar ${INCOME[a.kind].toLowerCase()}`, 'income') : null].filter(Boolean));
+    opsGroup.hidden = !opsGroup.children.length;
+    opsTitle.hidden = opsGroup.hidden;
   }
 
   function pushTrade(tr, side) {
@@ -1277,7 +1345,8 @@ function openDetail(id, { edit = false } = {}) {
       h('div.group', null,
         a0.kind !== 'custom' && a0.kind !== 'retire' && fieldRow('Cantidad', vQty), fieldRow('Valor', vVal),
         a0.kind !== 'cash' && fieldRow(a0.kind === 'custom' ? 'Costo' : a0.kind === 'retire' ? 'Total aportado' : 'Costo promedio', vCost),
-        a0.kind !== 'cash' && fieldRow('Ganancia', vGain), trades && realRow, trades && incomeRow, fieldRow('Peso', vShare)),
+        a0.kind !== 'cash' && fieldRow('Ganancia', vGain), trades && realRow, trades && incomeRow),
+      apyGroup, apyGroup && apyNote,
       opsTitle, opsGroup,
       statsGroup,
       a0.kind === 'retire' && planNote,
@@ -1618,6 +1687,14 @@ if (!hadStore) {
 } else mirrorNow();
 P.onPrices(() => scheduleRender(false));
 H.onHistory(() => scheduleRender(false));
+
+// Savings interest: credited when a month has passed, checked on launch, on
+// coming back to the app and every few minutes while it is open.
+const unitUsd = a => { const q = P.quoteOf(a); return q ? q.p : null; };
+const accrueNow = () => accrueInterest(unitUsd);
+setTimeout(accrueNow, 1500);
+setInterval(accrueNow, 5 * 60e3);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(accrueNow, 1500); });
 
 if (location.hash === '#demo' && !state.holdings.length) enterDemo(demoHoldings());
 sync();

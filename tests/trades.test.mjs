@@ -88,3 +88,30 @@ test('income over the last twelve months', () => {
   assert.equal(incomeSince(tx, 50), 6);
   assert.equal(incomeSince(tx, 0), 11);
 });
+
+import { accrue, addMonth, monthlyRate } from '../js/trades.js';
+
+test('a month later is the same day, or the last day of a short month', () => {
+  const d = t => new Date(t).toISOString().slice(0, 10);
+  assert.equal(d(addMonth(Date.UTC(2026, 0, 15, 12))), '2026-02-15');
+  assert.equal(d(addMonth(Date.UTC(2026, 0, 31, 12))), '2026-02-28');
+});
+
+test('savings interest is credited monthly and compounds to the APY', () => {
+  const start = Date.UTC(2026, 0, 10, 12);
+  const h = { kind: 'cash', qty: 10000, apy: 4.5, apyFrom: start, added: 0 };
+  assert.equal(accrue(h, start + 20 * 86400e3, 1), null, 'nothing before a month');
+  const r = accrue(h, addMonth(addMonth(start)) + 1000, 1);
+  const income = r.tx.filter(x => x.side === 'income');
+  assert.equal(income.length, 2);
+  assert.equal(income[0].qty, Math.round(10000 * monthlyRate(4.5) * 100) / 100);
+  assert.ok(income[1].qty > income[0].qty, 'the second month earns on the first');
+  assert.equal(r.apyFrom, addMonth(addMonth(start)));
+  // a year of it gives the APY, to the cent rounding
+  let y = { ...h }; let now = start;
+  for (let i = 0; i < 12; i++) now = addMonth(now);
+  const year = accrue(y, now, 1);
+  const bal = replay(year.tx).qty;
+  assert.ok(Math.abs(bal - 10450) < 0.1, `after a year: ${bal}`);
+  assert.equal(accrue({ ...h, apy: 0 }, now, 1), null);
+});

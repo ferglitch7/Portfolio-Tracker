@@ -121,25 +121,47 @@ test('income: a dividend, a staking reward and interest on cash', async () => {
   assert.equal(await field(p, 'Costo promedio'), '$2.090,91');
   await p.keyboard.press('Escape'); await h.wait(900);
 
-  // cash: interest adds to the balance; editing the balance becomes a deposit
+  // cash: no manual interest entry; the balance edit is recorded once there is history
   await p.tap('.row:has-text("Cash") .row-main'); await h.wait(1200);
-  await p.tap('.op-add:has-text("Registrar interés")'); await h.wait(900);
-  await p.fill('#tr-qty', '40');
-  await p.tap('.sheet-foot .btn-primary'); await h.wait(900);
-  assert.equal(await field(p, 'Cantidad'), '10.040 USD');
-  assert.equal(await field(p, 'Intereses'), '+$40,00');
-  await p.tap('.sheet .btn-secondary:has-text("Editar")'); await h.wait(900);
-  await p.fill('#amt-qty', '12040');
-  await p.tap('.sheet-foot .btn-primary'); await h.wait(900);
-  assert.equal(await field(p, 'Cantidad'), '12.040 USD');
-  assert.deepEqual(await p.$$eval('.ops .op .op-kind', e => e.map(x => x.textContent)), ['Depósito', 'Interés', 'Saldo inicial']);
+  assert.equal(await p.$$eval('.sheet .op-add', e => e.length), 0);
+  assert.doesNotMatch(await p.textContent('.sheet'), /null/);
+  assert.equal(await p.isVisible('.sheet .field:has-text("Peso")'), false, 'no weight row');
   await p.keyboard.press('Escape'); await h.wait(900);
 
   // summary under Rendimiento: 25 + 3.000 + 40
   await p.$eval('#perf', e => e.scrollIntoView()); await h.wait(300);
-  assert.match(await p.textContent('#perf-income'), /\+\$3\.065/);
-  const cash = (await h.stored()).holdings.find(x => x.id === CASH.id);
-  assert.equal(cash.qty, 12040);
+  assert.match(await p.textContent('#perf-income'), /\+\$3\.025/);
+  assert.deepEqual(h.errors, []);
+  await h.close();
+});
+
+test('savings interest: set a rate, credited monthly, shown as income', async () => {
+  const DAY = 86400e3;
+  const from = Date.now() - 65 * DAY; // two full months ago
+  const h = await phone(env, { seed: { holdings: [{ ...CASH, apy: 4.5, apyFrom: from }], settings: {} } });
+  const { p } = h;
+  await h.wait(3500);
+  let cash = (await h.stored()).holdings[0];
+  const credits = cash.tx.filter(x => x.side === 'income');
+  assert.equal(credits.length, 2, 'two monthly credits');
+  assert.ok(cash.qty > 10073 && cash.qty < 10074, `balance ${cash.qty}`);
+  await p.tap('.row:has-text("Cash") .row-main'); await h.wait(1200);
+  assert.equal(await field(p, 'Interés anual'), '4,5 %');
+  assert.match(await p.textContent('.sheet'), /Próximo abono/);
+  assert.deepEqual(await p.$$eval('.ops .op .op-kind', e => e.map(x => x.textContent)), ['Interés', 'Interés', 'Saldo inicial']);
+  assert.match(await field(p, 'Intereses'), /^\+\$73,/);
+
+  // change the rate, then remove it
+  await p.tap('#apy-field'); await h.wait(900);
+  await p.fill('#apy-input', '5');
+  assert.match(await p.textContent('.sheet-view:last-child .amt-value'), /al mes/);
+  await p.tap('.sheet-foot .btn-primary'); await h.wait(900);
+  cash = (await h.stored()).holdings[0];
+  assert.equal(cash.apy, 5);
+  await p.tap('#apy-field'); await h.wait(900);
+  await p.tap('.sheet-view:last-child .btn-text.danger'); await h.wait(900);
+  assert.equal(await field(p, 'Interés anual'), 'Añadir');
+  assert.equal((await h.stored()).holdings[0].apy, undefined);
   assert.deepEqual(h.errors, []);
   await h.close();
 });

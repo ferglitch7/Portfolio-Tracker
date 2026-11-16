@@ -5,7 +5,7 @@
 // (holding.tx, see trades.js); then quantity and cost are the replay of those
 // trades and are never edited directly.
 
-import { replay, openingOf, canTrade, hasHistory, newId } from './trades.js';
+import { replay, openingOf, canTrade, hasHistory, newId, accrue } from './trades.js';
 
 const KEY = 'portfolio.v1';
 
@@ -131,6 +131,34 @@ export function setTrades(id, trades) {
   h.tx = trades;
   h.qty = r.qty;
   h.cost = r.cost;
+  commit('holdings');
+}
+
+/**
+ * Credit the interest savings balances have earned. `priceOf(holding)` is the
+ * USD value of one unit of its currency, or null while it is unknown.
+ */
+export function accrueInterest(priceOf, now = Date.now()) {
+  if (demo) return false;
+  let changed = false;
+  for (const h of state.holdings) {
+    if (!(h.apy > 0)) continue;
+    const r = accrue(h, now, priceOf(h));
+    if (!r) continue;
+    const res = replay(r.tx);
+    Object.assign(h, { tx: r.tx, apyFrom: r.apyFrom, qty: res.qty, cost: res.cost });
+    changed = true;
+  }
+  if (changed) commit('holdings');
+  return changed;
+}
+
+/** Set the annual yield of a cash balance (0 to stop). Interest owed so far is credited first. */
+export function setApy(id, apy, priceOf) {
+  accrueInterest(priceOf);
+  const h = getHolding(id);
+  if (!h) return;
+  if (apy > 0) { h.apy = apy; h.apyFrom = Date.now(); } else { delete h.apy; delete h.apyFrom; }
   commit('holdings');
 }
 

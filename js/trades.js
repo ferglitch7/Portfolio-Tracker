@@ -93,3 +93,38 @@ export function newId() { return Math.random().toString(36).slice(2, 10); }
 
 // Floating point noise from many re-weightings: keep ~12 significant digits.
 function clean(v) { return Math.abs(v) < 1e-12 ? 0 : Number(v.toPrecision(12)); }
+
+// ---------- interest on cash ---------------------------------------------------
+
+/** Same day next month; the 31st becomes the last day of a shorter month. */
+export function addMonth(t) {
+  const d = new Date(t), day = d.getDate();
+  d.setDate(1);
+  d.setMonth(d.getMonth() + 1);
+  d.setDate(Math.min(day, new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()));
+  return d.getTime();
+}
+
+/** Monthly rate that compounds to the annual yield (APY), e.g. 4.5 → 0.00367. */
+export const monthlyRate = apy => Math.pow(1 + apy / 100, 1 / 12) - 1;
+
+/**
+ * Interest a savings balance has earned since it was last credited: one entry
+ * per full month, on the balance of that day, as a bank pays it. `priceUsd` is
+ * what one unit of the currency is worth in USD. Returns { tx, apyFrom } when
+ * something was credited or the date moved, else null.
+ */
+export function accrue(holding, now, priceUsd) {
+  if (!(holding.apy > 0) || !holding.apyFrom || !(priceUsd > 0)) return null;
+  const rate = monthlyRate(holding.apy);
+  let tx = openingOf(holding), from = holding.apyFrom, moved = false;
+  for (let i = 0; i < 240; i++) {
+    const next = addMonth(from);
+    if (next > now) break;
+    const balance = replay(tx.filter(x => x.opening || (x.t || 0) <= next)).qty;
+    const interest = Math.round(balance * rate * 100) / 100;
+    if (interest > 0) tx = [...tx, { id: newId(), t: next, side: 'income', qty: interest, price: priceUsd, auto: true }];
+    from = next; moved = true;
+  }
+  return moved ? { tx, apyFrom: from } : null;
+}

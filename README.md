@@ -5,8 +5,9 @@ vivo: crypto, acciones y ETFs de EE. UU., metales, efectivo y activos propios.
 Guardas cantidad y, si quieres, costo promedio. En crypto, acciones y metales
 puedes además registrar compras y ventas con fecha: la cantidad y el costo
 promedio salen de ellas y se calcula la ganancia realizada. También guarda
-dividendos (acciones), recompensas de staking (crypto) e intereses (Cash), y
-suma lo cobrado en los últimos 12 meses. No hay conexión a
+dividendos (acciones) y recompensas de staking (crypto). El Cash puede tener una
+tasa anual (APY): cada mes la app abona sola el interés al saldo, como una
+cuenta de ahorro. Lo cobrado en los últimos 12 meses se suma en Rendimiento. No hay conexión a
 brokers ni wallets.
 
 Son archivos estáticos: sin backend, sin build y sin nada corriendo en tu PC.
