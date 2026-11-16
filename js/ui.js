@@ -109,7 +109,8 @@ export function sparkEl() {
 }
 
 /** Draw the last `span` ms of a series as a tiny trend line. */
-export function drawSpark(svg, pts, span) {
+/** `trend` (optional) colours the line by that change instead of its own ends. */
+export function drawSpark(svg, pts, span, trend) {
   const end = pts[pts.length - 1][0], start = end - span;
   const win = pts.filter(p => p[0] >= start);
   if (win.length < 2) { svg.classList.remove('on'); return; }
@@ -136,5 +137,5 @@ export function drawSpark(svg, pts, span) {
   });
   svg.firstChild.setAttribute('d', d);
   svg.classList.add('on');
-  svg.classList.toggle('down', ys[ys.length - 1] < ys[0]);
+  svg.classList.toggle('down', trend != null ? trend < -0.00005 : ys[ys.length - 1] < ys[0]);
 }

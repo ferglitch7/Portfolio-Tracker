@@ -4,7 +4,9 @@ App web instalable (PWA) que valora tus posiciones al precio de mercado en
 vivo: crypto, acciones y ETFs de EE. UU., metales, efectivo y activos propios.
 Guardas cantidad y, si quieres, costo promedio. En crypto, acciones y metales
 puedes además registrar compras y ventas con fecha: la cantidad y el costo
-promedio salen de ellas y se calcula la ganancia realizada. No hay conexión a
+promedio salen de ellas y se calcula la ganancia realizada. También guarda
+dividendos (acciones), recompensas de staking (crypto) e intereses (Cash), y
+suma lo cobrado en los últimos 12 meses. No hay conexión a
 brokers ni wallets.
 
 Son archivos estáticos: sin backend, sin build y sin nada corriendo en tu PC.

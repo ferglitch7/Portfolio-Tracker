@@ -474,6 +474,7 @@ button.field:active { background: var(--fill); }
 .op-side { align-items: flex-end; font-variant-numeric: tabular-nums; }
 .op-kind { font-weight: 600; }
 .op-kind.sell { color: var(--down); }
+.op-kind.income { color: var(--up); }
 .op-when, .op-at { font-size: 12px; color: var(--label-2); }
 .op-qty { font-size: 14px; }
 .op-add .field-label { color: var(--tint); }
@@ -609,6 +610,8 @@ button.field:active { background: var(--fill); }
 .perf.masked .perf-abs { filter: blur(6px); opacity: 0.7; }
 .perf-line { display: flex; flex-wrap: wrap; gap: 6px 18px; padding: 10px 12px 8px; font-size: 12px; }
 .perf-line:empty { display: none; }
+.perf-income { border-top: 0.5px solid var(--sep); margin: 0 12px; padding: 8px 0 8px; }
+.masked .perf-income b { filter: blur(6px); opacity: 0.7; }
 .perf-item { display: inline-flex; align-items: baseline; gap: 6px; min-width: 0; }
 .perf-k { color: var(--label-2); font-size: 11px; }
 .perf-item b { font-weight: 600; font-variant-numeric: tabular-nums; }

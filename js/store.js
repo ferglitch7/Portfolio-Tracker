@@ -5,7 +5,7 @@
 // (holding.tx, see trades.js); then quantity and cost are the replay of those
 // trades and are never edited directly.
 
-import { replay, openingOf, canTrade, newId } from './trades.js';
+import { replay, openingOf, canTrade, hasHistory, newId } from './trades.js';
 
 const KEY = 'portfolio.v1';
 
@@ -47,11 +47,17 @@ function renameCash(h) {
 function normalize(h) {
   h = renameCash(h);
   if (!('tx' in h)) return h;
-  const ok = Array.isArray(h.tx) && canTrade(h) && h.tx.every(t => t && (t.side === 'buy' || t.side === 'sell') && Number.isFinite(t.qty) && t.qty > 0 && (t.price == null || Number.isFinite(t.price)));
+  const ok = Array.isArray(h.tx) && hasHistory(h) && h.tx.every(validTrade);
   const { tx, ...rest } = h;
   if (!ok) return rest;
   const r = replay(tx);
   return { ...rest, tx, qty: r.qty, cost: r.cost };
+}
+
+function validTrade(t) {
+  if (!t || (t.price != null && !Number.isFinite(t.price))) return false;
+  if (t.side === 'income') return Number.isFinite(t.qty) && t.qty >= 0 && (t.qty > 0 || (Number.isFinite(t.amount) && t.amount > 0));
+  return (t.side === 'buy' || t.side === 'sell') && Number.isFinite(t.qty) && t.qty > 0;
 }
 
 function validHolding(h) {
@@ -96,7 +102,7 @@ export function getHolding(id) { return state.holdings.find(h => h.id === id); }
  */
 export function addHolding(asset, qty, cost) {
   const cur = getHolding(asset.id);
-  if (cur && canTrade(cur)) {
+  if (cur && (canTrade(cur) || cur.tx)) {
     // A second buy of something already held is recorded as a trade.
     if (asset.unit) cur.unit = asset.unit;
     setTrades(cur.id, [...openingOf(cur), { id: newId(), t: Date.now(), side: 'buy', qty, price: cost ?? null }]);

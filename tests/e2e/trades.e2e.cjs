@@ -92,3 +92,54 @@ test('buying again from the + sheet records a trade; gold trades in grams', asyn
   assert.deepEqual(h.errors, []);
   await h.close();
 });
+
+test('income: a dividend, a staking reward and interest on cash', async () => {
+  const AAPL = { id: 'stock:AAPL', kind: 'stock', sym: 'AAPL', name: 'Apple', qty: 10, cost: 150 };
+  const ETH = { id: 'crypto:ethereum', kind: 'crypto', sym: 'ETH', name: 'Ethereum', cg: 'ethereum', cb: 'ETH-USD', qty: 10, cost: 2000 };
+  const h = await phone(env, { seed: { holdings: [AAPL, ETH, CASH], settings: { finnhubKey: 'test' } } });
+  const { p } = h;
+  await h.wait(3000);
+
+  // dividend: an amount, the shares do not change
+  await p.tap('.row:has-text("Apple") .row-main'); await h.wait(1500);
+  await p.tap('.op-add:has-text("Registrar dividendo")'); await h.wait(900);
+  assert.equal(await p.textContent('.sheet-view:last-child .amt-unit'), 'USD');
+  assert.equal(await p.isVisible('#tr-price'), false);
+  await p.fill('#tr-qty', '25');
+  await p.tap('.sheet-foot .btn-primary'); await h.wait(900);
+  assert.equal(await field(p, 'Cantidad'), '10 AAPL');
+  assert.equal(await field(p, 'Dividendos'), '+$25,00');
+  await p.keyboard.press('Escape'); await h.wait(900);
+
+  // reward: 1 ETH at 3.000 joins the position: cost (10×2.000 + 3.000) / 11
+  await p.tap('.row:has-text("Ethereum") .row-main'); await h.wait(1500);
+  await p.tap('.op-add:has-text("Registrar recompensa")'); await h.wait(900);
+  await p.fill('#tr-qty', '1');
+  await p.tap('.sheet-foot .btn-primary'); await h.wait(900);
+  assert.equal(await field(p, 'Cantidad'), '11 ETH');
+  assert.equal(await field(p, 'Recompensas'), '+$3.000,00');
+  assert.equal(await field(p, 'Costo promedio'), '$2.090,91');
+  await p.keyboard.press('Escape'); await h.wait(900);
+
+  // cash: interest adds to the balance; editing the balance becomes a deposit
+  await p.tap('.row:has-text("Cash") .row-main'); await h.wait(1200);
+  await p.tap('.op-add:has-text("Registrar interés")'); await h.wait(900);
+  await p.fill('#tr-qty', '40');
+  await p.tap('.sheet-foot .btn-primary'); await h.wait(900);
+  assert.equal(await field(p, 'Cantidad'), '10.040 USD');
+  assert.equal(await field(p, 'Intereses'), '+$40,00');
+  await p.tap('.sheet .btn-secondary:has-text("Editar")'); await h.wait(900);
+  await p.fill('#amt-qty', '12040');
+  await p.tap('.sheet-foot .btn-primary'); await h.wait(900);
+  assert.equal(await field(p, 'Cantidad'), '12.040 USD');
+  assert.deepEqual(await p.$$eval('.ops .op .op-kind', e => e.map(x => x.textContent)), ['Depósito', 'Interés', 'Saldo inicial']);
+  await p.keyboard.press('Escape'); await h.wait(900);
+
+  // summary under Rendimiento: 25 + 3.000 + 40
+  await p.$eval('#perf', e => e.scrollIntoView()); await h.wait(300);
+  assert.match(await p.textContent('#perf-income'), /\+\$3\.065/);
+  const cash = (await h.stored()).holdings.find(x => x.id === CASH.id);
+  assert.equal(cash.qty, 12040);
+  assert.deepEqual(h.errors, []);
+  await h.close();
+});
