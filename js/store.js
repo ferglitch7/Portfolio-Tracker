@@ -18,6 +18,7 @@ const defaults = () => ({
     range: '1D',     // chart range on the home screen
     targets: null,   // { crypto: 60, cash: 20, … } percentages adding up to 100
     numbers: 'dot',  // 'dot' → 1.234,50   'comma' → 1,234.50
+    alloc: 'bar',    // how the split by class is drawn: 'bar', 'ring' or 'rows'
     order: null,     // asset ids in the order the user arranged them, or null to sort by value
     goal: null,      // { name, amount, ccy, monthly, rate, seen } or null
   },
@@ -234,8 +235,8 @@ export function replaceAll(data) {
 /** What a copy contains: positions and preferences, never API keys. */
 export function exportObject(extra = {}) {
   const holdings = demo ? savedHoldings : state.holdings;
-  const { ccy, unit, targets, numbers, order, goal } = state.settings;
-  return { app: 'portfolio', version: 1, exported: new Date().toISOString(), holdings, watch: state.watch, settings: { ccy, unit, targets, numbers, order, goal }, ...extra };
+  const { ccy, unit, targets, numbers, order, goal, alloc } = state.settings;
+  return { app: 'portfolio', version: 1, exported: new Date().toISOString(), holdings, watch: state.watch, settings: { ccy, unit, targets, numbers, order, goal, alloc }, ...extra };
 }
 
 export function exportData(extra) {

@@ -259,37 +259,72 @@ function renderHome() {
   firstPaint = false;
 }
 
+// The split by class, in the style chosen in Ajustes (settings.alloc):
+//   'bar'   a thin stacked bar with the legend below (the default)
+//   'ring'  a ring with the total in the middle, the legend beside it
+//   'rows'  one row per class: name, amount, %, its own bar
+// In all three, tapping a class shows only its assets, and a target (if set)
+// shows next to the real split.
+const RING = { c: 60, r: 46, stroke: 15, tr: 58.5, tstroke: 3 };
+const ringArcs = new Map(), ringGlows = new Map(), ringTargets = new Map();
+const rowMapAlloc = new Map();
+
+function svgNode(tag, attrs) {
+  const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  for (const k in attrs) el.setAttribute(k, attrs[k]);
+  return el;
+}
+
+// Lay arcs around a circle: [{ key, share }] → dash settings with a small gap.
+function arcsFor(list, r, stroke, gapPx) {
+  const C = 2 * Math.PI * r;
+  const many = list.filter(x => x.share > 0).length > 1;
+  let at = 0;
+  return list.map(x => {
+    const len = C * x.share;
+    const visible = many ? Math.max(0.01, len - gapPx - stroke) : C;
+    const out = { key: x.key, dash: `${visible} ${C}`, offset: -(at + (many ? (gapPx + stroke) / 2 : 0)) };
+    at += len;
+    return out;
+  });
+}
+
+const pickClass = kind => { filter = filter === kind ? null : kind; haptic(5); renderHome(); };
+
 function renderAlloc(v) {
+  const style = ['bar', 'ring', 'rows'].includes(state.settings.alloc) ? state.settings.alloc : 'bar';
   const bar = $('alloc-bar'), tbar = $('alloc-target'), legend = $('alloc-legend');
   const t = targets();
   const rows = plan(v.kinds, v.total, t).filter(x => x.value > 0 || (x.target || 0) > 0);
   rows.sort((x, y) => y.value - x.value || (y.target || 0) - (x.target || 0));
   $('alloc').hidden = v.kinds.length === 0;
+  $('alloc').dataset.style = style;
   if (filter && !v.kinds.some(k => k[0] === filter)) filter = null;
+
+  // The legend lives beside the ring, below the bar; the list needs none.
+  // "Objetivo" sits in the legend under the bar, on its own line otherwise.
+  const ringCard = $('alloc-ringcard'), btnT = $('btn-targets'), box = $('alloc');
+  if (style === 'ring') { if (legend.parentNode !== ringCard) ringCard.append(legend); }
+  else if (legend.parentNode !== box) box.insertBefore(legend, ringCard);
+  if (style === 'bar') { if (btnT.parentNode !== legend) legend.append(btnT); }
+  else if (btnT.parentNode !== box) box.append(btnT);
+  bar.hidden = style !== 'bar';
+  tbar.hidden = style !== 'bar' || !t;
+  ringCard.hidden = style !== 'ring';
+  $('alloc-rows').hidden = style !== 'rows';
+  legend.hidden = style === 'rows';
+
+  if (style === 'bar') paintBar(rows, t);
+  if (style === 'ring') paintRing(rows, t, v);
+  if (style === 'rows') paintRows(rows, v);
 
   const live = new Set();
   rows.forEach((x, i) => {
     const kind = x.kind;
     live.add(kind);
-
-    let seg = segMap.get(kind);
-    if (x.value > 0) {
-      if (!seg) { seg = h('div.alloc-seg', { style: { background: KINDS[kind].color } }); bar.append(seg); segMap.set(kind, seg); }
-      seg.style.order = i;
-      seg.style.flex = `${Math.max(x.share, 0.004)} 1 0px`;
-      seg.classList.toggle('on', filter === kind);
-    } else if (seg) { seg.remove(); segMap.delete(kind); }
-
-    let tseg = tsegMap.get(kind);
-    if (t && x.target > 0) {
-      if (!tseg) { tseg = h('div.alloc-seg', { style: { background: KINDS[kind].color } }); tbar.append(tseg); tsegMap.set(kind, tseg); }
-      tseg.style.order = i;
-      tseg.style.flex = `${x.target} 1 0px`;
-    } else if (tseg) { tseg.remove(); tsegMap.delete(kind); }
-
     let chip = chipMap.get(kind);
     if (!chip) {
-      chip = h('button.chip', { type: 'button', onclick: () => { filter = filter === kind ? null : kind; haptic(5); renderHome(); } },
+      chip = h('button.chip', { type: 'button', onclick: () => pickClass(kind) },
         h('i', { style: { background: KINDS[kind].color } }), h('span', { text: KINDS[kind].label }), h('b'), h('em'));
       legend.append(chip);
       chipMap.set(kind, chip);
@@ -302,16 +337,123 @@ function renderAlloc(v) {
     chip.classList.toggle('on', filter === kind);
     chip.setAttribute('aria-pressed', String(filter === kind));
   });
-  for (const [kind, chip] of chipMap) {
-    if (live.has(kind)) continue;
-    chip.remove(); chipMap.delete(kind);
-    const seg = segMap.get(kind); if (seg) { seg.remove(); segMap.delete(kind); }
-    const tseg = tsegMap.get(kind); if (tseg) { tseg.remove(); tsegMap.delete(kind); }
-  }
-  tbar.hidden = !t;
-  bar.classList.toggle('filtered', !!filter);
+  for (const [kind, chip] of chipMap) if (!live.has(kind)) { chip.remove(); chipMap.delete(kind); }
   legend.classList.toggle('filtering', !!filter);
   $('btn-targets').classList.toggle('set', !!t);
+}
+
+function paintBar(rows, t) {
+  const bar = $('alloc-bar'), tbar = $('alloc-target');
+  const live = new Set();
+  rows.forEach((x, i) => {
+    const kind = x.kind;
+    live.add(kind);
+    let seg = segMap.get(kind);
+    if (x.value > 0) {
+      if (!seg) { seg = h('div.alloc-seg', { style: { background: KINDS[kind].color } }); bar.append(seg); segMap.set(kind, seg); }
+      seg.style.order = i;
+      seg.style.flex = `${Math.max(x.share, 0.004)} 1 0px`;
+      seg.classList.toggle('on', filter === kind);
+    } else if (seg) { seg.remove(); segMap.delete(kind); }
+    let tseg = tsegMap.get(kind);
+    if (t && x.target > 0) {
+      if (!tseg) { tseg = h('div.alloc-seg', { style: { background: KINDS[kind].color } }); tbar.append(tseg); tsegMap.set(kind, tseg); }
+      tseg.style.order = i;
+      tseg.style.flex = `${x.target} 1 0px`;
+    } else if (tseg) { tseg.remove(); tsegMap.delete(kind); }
+  });
+  for (const [kind, seg] of segMap) if (!live.has(kind)) { seg.remove(); segMap.delete(kind); }
+  for (const [kind, tseg] of tsegMap) if (!live.has(kind)) { tseg.remove(); tsegMap.delete(kind); }
+  bar.classList.toggle('filtered', !!filter);
+}
+
+function paintRing(rows, t, v) {
+  const svg = $('ring-svg');
+  if (!svg.firstChild) {
+    // A soft glow of each arc's colour underneath gives the ring body.
+    const defs = svgNode('defs', {});
+    const glow = svgNode('filter', { id: 'ring-glow', x: '-30%', y: '-30%', width: '160%', height: '160%' });
+    glow.append(svgNode('feGaussianBlur', { stdDeviation: '4' }));
+    defs.append(glow);
+    svg.append(defs);
+    svg.append(svgNode('g', { class: 'ring-glows', filter: 'url(#ring-glow)', transform: `rotate(-90 ${RING.c} ${RING.c})` }));
+    svg.append(svgNode('g', { class: 'ring-arcs', transform: `rotate(-90 ${RING.c} ${RING.c})` }));
+    svg.append(svgNode('g', { class: 'ring-targets', transform: `rotate(-90 ${RING.c} ${RING.c})` }));
+  }
+  const glowsG = svg.children[1], arcsG = svg.children[2], targetsG = svg.children[3];
+  const live = new Set();
+  const held = rows.filter(x => x.value > 0);
+  for (const { key, dash, offset } of arcsFor(held.map(x => ({ key: x.kind, share: x.share })), RING.r, RING.stroke, 2.5)) {
+    let arc = ringArcs.get(key);
+    if (!arc) {
+      arc = svgNode('circle', { class: 'ring-arc', cx: RING.c, cy: RING.c, r: RING.r, 'stroke-width': RING.stroke, stroke: KINDS[key].color });
+      arc.addEventListener('click', () => pickClass(key));
+      arcsG.append(arc);
+      ringArcs.set(key, arc);
+    }
+    let g = ringGlows.get(key);
+    if (!g) {
+      g = svgNode('circle', { class: 'ring-glow', cx: RING.c, cy: RING.c, r: RING.r, 'stroke-width': RING.stroke, stroke: KINDS[key].color });
+      glowsG.append(g);
+      ringGlows.set(key, g);
+    }
+    for (const el of [arc, g]) { el.style.strokeDasharray = dash; el.style.strokeDashoffset = offset; el.classList.toggle('on', filter === key); }
+    live.add(key);
+  }
+  for (const [key, arc] of ringArcs) if (!live.has(key)) { arc.remove(); ringArcs.delete(key); }
+  for (const [key, g] of ringGlows) if (!live.has(key)) { g.remove(); ringGlows.delete(key); }
+
+  const tlist = t ? rows.filter(x => x.target > 0).map(x => ({ key: x.kind, share: x.target })) : [];
+  const tlive = new Set();
+  for (const { key, dash, offset } of arcsFor(tlist, RING.tr, RING.tstroke, 2.5)) {
+    let arc = ringTargets.get(key);
+    if (!arc) {
+      arc = svgNode('circle', { class: 'ring-target', cx: RING.c, cy: RING.c, r: RING.tr, 'stroke-width': RING.tstroke, stroke: KINDS[key].color });
+      targetsG.append(arc);
+      ringTargets.set(key, arc);
+    }
+    arc.style.strokeDasharray = dash;
+    arc.style.strokeDashoffset = offset;
+    tlive.add(key);
+  }
+  for (const [key, arc] of ringTargets) if (!tlive.has(key)) { arc.remove(); ringTargets.delete(key); }
+
+  // Middle of the ring: the total, or the class being looked at.
+  const sel = filter && rows.find(x => x.kind === filter);
+  const n = held.length;
+  $('ring-value').textContent = state.settings.hidden ? '•••' : F.compactMoney(sel ? sel.value : v.total, ccy(), 1);
+  $('ring-label').textContent = sel ? KINDS[sel.kind].label : n === 1 ? '1 clase' : `${n} clases`;
+  $('alloc-ring').classList.toggle('filtered', !!filter);
+}
+
+function paintRows(rows, v) {
+  const box = $('alloc-rows');
+  const order = [];
+  for (const x of rows) {
+    let r = rowMapAlloc.get(x.kind);
+    if (!r) {
+      const pct = h('b.ar-pct'), amt = h('span.ar-amt'), drift = h('em.ar-drift'), fill = h('i.ar-fill', { style: { background: KINDS[x.kind].color } }), mark = h('i.ar-mark');
+      const el = h('button.ar-row', { type: 'button', onclick: () => pickClass(x.kind) },
+        h('div.ar-top', null, h('span.ar-name', { text: KINDS[x.kind].label }), drift, amt, pct),
+        h('div.ar-track', null, fill, mark));
+      r = { el, pct, amt, drift, fill, mark };
+      rowMapAlloc.set(x.kind, r);
+    }
+    r.pct.textContent = F.share(x.share);
+    r.amt.textContent = state.settings.hidden ? '•••' : F.wholeMoney(x.value, ccy());
+    const pts = x.drift == null ? 0 : Math.round(x.drift * 100);
+    r.drift.textContent = pts ? (pts > 0 ? `+${pts}` : `−${-pts}`) : '';
+    r.fill.style.width = (x.share * 100).toFixed(2) + '%';
+    // The target, as a tick on the bar.
+    r.mark.hidden = x.target == null;
+    if (x.target != null) r.mark.style.left = (x.target * 100).toFixed(2) + '%';
+    r.el.classList.toggle('on', filter === x.kind);
+    order.push(r.el);
+  }
+  for (const [kind, r] of rowMapAlloc) if (!rows.some(x => x.kind === kind)) { r.el.remove(); rowMapAlloc.delete(kind); }
+  const cur = [...box.children];
+  if (cur.length !== order.length || order.some((el, i) => cur[i] !== el)) box.replaceChildren(...order);
+  box.classList.toggle('filtering', !!filter);
 }
 
 function renderNotice() {
@@ -1662,6 +1804,7 @@ function openSettings() {
   lockSupported().then(ok => { lockRow.hidden = !ok; });
   const byValue = toggle(!state.settings.order, on => { if (on) setSetting('order', null); else byValue.set(true); }, 'Ordenar activos por valor');
   const numbers = segmented([['dot', '1.234,50'], ['comma', '1,234.50']], state.settings.numbers || 'dot', s => setSetting('numbers', s));
+  const allocStyle = segmented([['bar', 'Barra'], ['ring', 'Anillo'], ['rows', 'Lista']], state.settings.alloc || 'bar', s => setSetting('alloc', s));
 
   const fileInput = h('input', { type: 'file', accept: 'application/json,.json', hidden: true, id: 'set-import' });
   fileInput.addEventListener('change', async () => {
@@ -1703,7 +1846,8 @@ function openSettings() {
         h('div.field', null, h('span.field-label', { text: 'Ocultar importes' }), h('span.field-value'), hide.el),
         lockRow,
         h('div.field', null, h('span.field-label', { text: 'Ordenar por valor' }), h('span.field-value'), byValue.el),
-        h('div.field.numbers', null, h('span.field-label', { text: 'Números' }), h('span.field-value'), numbers.el)),
+        h('div.field.numbers', null, h('span.field-label', { text: 'Números' }), h('span.field-value'), numbers.el),
+        h('div.field.numbers.alloc-style', null, h('span.field-label', { text: 'Distribución' }), h('span.field-value'), allocStyle.el)),
       h('p.hint', { text: 'Para mover un activo, mantenlo pulsado y arrástralo. Al hacerlo, el orden por valor se desactiva.' }),
       h('div.group-title', { text: 'Acciones en vivo' }),
       h('div.group', null, keyField({

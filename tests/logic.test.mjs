@@ -81,7 +81,7 @@ test('copies carry positions and preferences but no API keys', () => {
   assert.ok(!text.includes('secret-1') && !text.includes('secret-2'));
   const doc = JSON.parse(text);
   assert.ok(Array.isArray(doc.holdings) && Array.isArray(doc.snapshots));
-  assert.deepEqual(Object.keys(doc.settings).sort(), ['ccy', 'goal', 'numbers', 'order', 'targets', 'unit']);
+  assert.deepEqual(Object.keys(doc.settings).sort(), ['alloc', 'ccy', 'goal', 'numbers', 'order', 'targets', 'unit']);
 });
 
 const now = 1_800_000_000_000, HOUR = 3600e3, DAY = 86400e3;
