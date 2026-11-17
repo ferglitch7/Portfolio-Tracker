@@ -11,6 +11,7 @@ const KEY = 'portfolio.v1';
 
 const defaults = () => ({
   holdings: [],
+  watch: [],       // assets followed without holding them: { id, kind, sym, name, … }
   settings: {
     ccy: 'USD', finnhubKey: '', historyKey: '', hidden: false,
     unit: 'ccy',     // balance shown in the currency, 'btc' or 'xau'
@@ -30,6 +31,7 @@ function read() {
     const d = defaults();
     return {
       holdings: Array.isArray(data.holdings) ? data.holdings.filter(validHolding).map(normalize) : [],
+      watch: cleanWatch(data.watch),
       settings: { ...d.settings, ...(data.settings || {}) },
     };
   } catch {
@@ -52,6 +54,14 @@ function normalize(h) {
   if (!ok) return rest;
   const r = replay(tx);
   return { ...rest, tx, qty: r.qty, cost: r.cost };
+}
+
+const WATCHABLE = new Set(['crypto', 'stock', 'metal']);
+function cleanWatch(list) {
+  if (!Array.isArray(list)) return [];
+  const seen = new Set();
+  return list.filter(a => a && typeof a.id === 'string' && WATCHABLE.has(a.kind) && !seen.has(a.id) && seen.add(a.id))
+    .map(({ id, kind, sym, name, cg, cb, img, el }) => ({ id, kind, sym, name, cg, cb, img, el }));
 }
 
 function validTrade(t) {
@@ -89,7 +99,7 @@ export function exitDemo() {
 export function subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); }
 
 function commit(what) {
-  const out = { holdings: demo ? savedHoldings : state.holdings, settings: state.settings };
+  const out = { holdings: demo ? savedHoldings : state.holdings, watch: state.watch, settings: state.settings };
   try { localStorage.setItem(KEY, JSON.stringify(out)); } catch { /* storage full or blocked */ }
   listeners.forEach(fn => fn(what));
 }
@@ -182,6 +192,31 @@ export function restoreHolding({ holding, index }) {
   commit('holdings');
 }
 
+// ---- watchlist ----
+
+export const canWatch = a => !!a && WATCHABLE.has(a.kind);
+export const isWatched = id => state.watch.some(a => a.id === id);
+
+export function watchAsset(asset) {
+  if (!canWatch(asset) || isWatched(asset.id)) return;
+  state.watch.push(cleanWatch([asset])[0]);
+  commit('watch');
+}
+
+export function unwatchAsset(id) {
+  const i = state.watch.findIndex(a => a.id === id);
+  if (i < 0) return null;
+  const [a] = state.watch.splice(i, 1);
+  commit('watch');
+  return { asset: a, index: i };
+}
+
+export function rewatch({ asset, index }) {
+  if (isWatched(asset.id)) return;
+  state.watch.splice(Math.min(index, state.watch.length), 0, asset);
+  commit('watch');
+}
+
 export function setSetting(key, value) {
   state.settings[key] = value;
   commit('settings');
@@ -191,6 +226,7 @@ export function replaceAll(data) {
   demo = false; savedHoldings = null;
   const d = defaults();
   state.holdings = Array.isArray(data.holdings) ? data.holdings.filter(validHolding).map(normalize) : [];
+  if ('watch' in data) state.watch = cleanWatch(data.watch);
   state.settings = { ...d.settings, ...state.settings, ...(data.settings || {}) };
   commit('holdings');
 }
@@ -199,7 +235,7 @@ export function replaceAll(data) {
 export function exportObject(extra = {}) {
   const holdings = demo ? savedHoldings : state.holdings;
   const { ccy, unit, targets, numbers, order, goal } = state.settings;
-  return { app: 'portfolio', version: 1, exported: new Date().toISOString(), holdings, settings: { ccy, unit, targets, numbers, order, goal }, ...extra };
+  return { app: 'portfolio', version: 1, exported: new Date().toISOString(), holdings, watch: state.watch, settings: { ccy, unit, targets, numbers, order, goal }, ...extra };
 }
 
 export function exportData(extra) {

@@ -3,7 +3,7 @@
 import {
   state, subscribe, addHolding, updateHolding, removeHolding, restoreHolding,
   setSetting, replaceAll, exportData, exportObject, getHolding, enterDemo, exitDemo, isDemo, setTrades,
-  accrueInterest, setApy,
+  accrueInterest, setApy, canWatch, isWatched, watchAsset, unwatchAsset, rewatch,
 } from './store.js';
 import { replay, sorted, openingOf, canTrade, canIncome, hasHistory, heldAt, consistent, newId, INCOME, incomeOf, incomeSince, addMonth, monthlyRate } from './trades.js';
 import * as P from './prices.js';
@@ -236,6 +236,7 @@ function renderHome() {
   renderGoalCard($('goal'), v);
   renderNotice();
   renderList(v);
+  renderWatch(v);
   renderPerf(v);
   if (!isDemo()) V.markSince(has);
 
@@ -681,6 +682,125 @@ function deleteHolding(id) {
   } else finish();
 }
 
+// ---- watchlist: assets followed without holding them ---------------------------
+
+const watchRows = new Map();
+
+function renderWatch(v) {
+  const box = $('watch'), list = $('watch-list');
+  const items = isDemo() ? [] : state.watch;
+  box.hidden = !items.length;
+  if (!items.length) { list.replaceChildren(); watchRows.clear(); return; }
+  const r = v.rate;
+  const order = [];
+  for (const a of items) {
+    let row = watchRows.get(a.id);
+    if (!row) {
+      const name = h('div.row-name'), sub = h('div.row-sub'), val = h('div.row-val'), chg = h('div.row-chg');
+      const spark = sparkEl();
+      const el = h('div.row', null, h('div.row-main', { role: 'button', tabIndex: 0, onclick: () => openWatch(a.id) },
+        logo(a), h('div.row-mid', null, name, sub), spark, h('div.row-end', null, val, chg)));
+      row = { el, name, sub, val, chg, spark, src: null, dir: null };
+      watchRows.set(a.id, row);
+    }
+    const q = P.quoteOf(a);
+    const pct = q && q.prev ? q.p / q.prev - 1 : null;
+    row.name.textContent = a.name;
+    row.sub.textContent = a.kind === 'metal' ? `${a.sym} · oz` : a.sym;
+    row.val.textContent = q ? F.price(q.p * r, ccy()) : '—';
+    row.chg.textContent = pct != null ? F.pct(pct) : q ? '' : a.kind === 'stock' && P.stockState() !== 'ok' ? 'Sin precio' : 'Cargando';
+    row.chg.className = 'row-chg ' + (pct > 0.00005 ? 'up' : pct < -0.00005 ? 'down' : '');
+    const day = H.peek(a, '1D');
+    const src = day ? H.windowed(a, day.pts, '1D') : null;
+    const dir = pct == null ? null : Math.sign(Math.round(pct * 1e5));
+    const last = src && src[src.length - 1];
+    if (last !== row.src || dir !== row.dir) {
+      row.src = last; row.dir = dir;
+      if (src) drawSpark(row.spark, src, 86400e3, pct); else row.spark.classList.remove('on');
+    }
+    order.push(row.el);
+  }
+  for (const [id, row] of watchRows) if (!items.some(a => a.id === id)) { row.el.remove(); watchRows.delete(id); }
+  const cur = [...list.children];
+  if (cur.length !== order.length || order.some((el, i) => cur[i] !== el)) list.replaceChildren(...order);
+  // same column for the trend lines as in the main list
+  let endW = 0;
+  for (const row of watchRows.values()) endW = Math.max(endW, row.val.scrollWidth, row.chg.scrollWidth);
+  list.style.setProperty('--end-w', endW ? Math.ceil(endW) + 'px' : '');
+}
+
+/** A followed asset: price, chart, figures; buy it or stop following. */
+function openWatch(id) {
+  const a = state.watch.find(x => x.id === id);
+  if (!a) return;
+  let range = '1D', chart = null, scrub = null, seq = 0, sheet = null;
+  const big = h('div.big'), pill = h('span.pill'), meta = h('span');
+  const host = H.availability(a) === 'yes' ? h('div', { 'data-nodrag': '' }) : null;
+  const seg = segmented(Object.keys(H.RANGES).map(k => [k, k]), range, k => { range = k; load(); });
+  const statsGroup = h('div.group', { hidden: true });
+  const approx = h('p.hint', { hidden: true });
+
+  function paint() {
+    const q = P.quoteOf(a), r = P.rate(ccy());
+    if (scrub) {
+      big.textContent = F.price(scrub.v * r, ccy());
+      setPill(pill, scrub.v / scrub.first - 1, null, null); pill.hidden = false;
+      meta.textContent = F.timeLabel(scrub.t, range);
+      return;
+    }
+    big.textContent = q ? F.price(q.p * r, ccy()) : '—';
+    const first = chart && chart.first;
+    const ratio = q && first ? q.p / first - 1 : q && q.prev ? q.p / q.prev - 1 : null;
+    pill.hidden = ratio == null;
+    if (ratio != null) setPill(pill, ratio, null, null);
+    meta.textContent = ratio == null ? (q ? '' : 'Sin precio en vivo') : first ? RANGE_LABEL[range] : 'hoy';
+    if (chart && range === '1D' && q) chart.tick(q.p);
+  }
+  async function load() {
+    if (!chart) return;
+    const my = ++seq;
+    chart.setData(null);
+    const got = await H.load(a, range);
+    if (my !== seq || !chart) return;
+    if (!got) { if (range === '1D') { chart.destroy(); chart = null; host.hidden = true; seg.el.hidden = true; } paint(); return; }
+    chart.setData(H.windowed(a, got.pts, range));
+    approx.hidden = !got.approx;
+    if (got.approx) approx.textContent = `Histórico aproximado a partir ${H.proxyOf(a)}.`;
+    paint();
+  }
+  async function stats() {
+    const q = P.quoteOf(a);
+    const rows = await loadStats(a, { price: q && q.p, rate: P.rate(ccy()), ccy: ccy(), finnhubKey: state.settings.finnhubKey, historyKey: state.settings.historyKey });
+    if (!rows.length) return;
+    statsGroup.replaceChildren(...rows.map(x => h('div.field', null, h('span.field-label', { text: x.label }), h('span.field-value', { text: x.value }))));
+    statsGroup.hidden = false;
+  }
+
+  const buy = () => { const v = amountView(sheet, a); sheet.push(v); v.focus(); };
+  const stop = () => {
+    const undo = unwatchAsset(id);
+    sheet.close();
+    if (undo) toast(`Dejaste de seguir ${a.name}`, { action: { label: 'Deshacer', run: () => rewatch(undo) } });
+  };
+  const view = makeView({
+    body: [
+      h('div.detail-top', null, logo(a), h('div', null, h('div.detail-name', { text: a.name }), h('div.detail-sym', { text: `${a.sym} · Seguimiento` }))),
+      h('div.detail-price', null, big, h('div.detail-meta', null, pill, meta)),
+      host, host && seg.el, approx,
+      statsGroup,
+      h('div.detail-actions', null,
+        h('button.btn-secondary', { type: 'button', text: 'Comprar', onclick: buy }),
+        h('button.btn-text.danger', { type: 'button', id: 'unwatch', text: 'Dejar de seguir', onclick: stop })),
+    ],
+  });
+  if (host) chart = createChart(host, { onScrub: x => { scrub = x; paint(); } });
+  const off = P.onPrices(paint);
+  view.onRemove = () => { off(); if (chart) { chart.destroy(); chart = null; } };
+  view.onShow = paint;
+  sheet = openSheet(view);
+  paint(); load(); stats();
+}
+
 // Price ticks arrive several times a second; the home repaints about once a second.
 let renderTimer = 0, lastRender = 0;
 function scheduleRender(now) {
@@ -851,6 +971,8 @@ function amountView(sheet, asset, { edit = false } = {}) {
       } else if (edit) updateHolding(asset.id, { qty, cost, ...(isMetal ? { unit } : {}) });
       else addHolding(isMetal ? { ...asset, unit } : asset, qty, cost);
     }
+    // Bought something that was only being followed: it now lives in the list.
+    if (!edit && isWatched(asset.id)) unwatchAsset(asset.id);
     if (edit && sheet.depth > 1) sheet.pop(); else sheet.close();
   }
   btn.addEventListener('click', save);
@@ -862,6 +984,12 @@ function amountView(sheet, asset, { edit = false } = {}) {
   if (nameInput) fields.push(h('label.field', null, h('span.field-label', { text: 'Nombre' }), nameInput));
   if (!isCash) fields.push(h('label.field', null, h('span.field-label', { text: isCustom ? 'Costo' : 'Costo promedio' }), costInput, costSuffix));
 
+  // Not held yet: it can also just be followed, without a quantity.
+  const follow = !edit && !held && canWatch(asset) && !isWatched(asset.id) && h('button.btn-text', {
+    type: 'button', id: 'amt-watch', text: 'Solo seguir, sin comprar',
+    onclick: () => { haptic(8); watchAsset(asset); sheet.close(); toast(`Siguiendo ${asset.name}`); },
+  });
+
   const view = makeView({
     title: edit ? 'Editar' : '',
     body: [
@@ -870,7 +998,7 @@ function amountView(sheet, asset, { edit = false } = {}) {
       fields.length ? h('div.group', null, fields) : null,
       held && !edit && !isCustom ? h('p.hint', { text: `Se suma a tu posición actual (${qtyLabel(held)}).`, style: { textAlign: 'center' } }) : null,
     ],
-    foot: btn,
+    foot: follow ? h('div.foot-stack', null, btn, follow) : btn,
   });
 
   P.watch(isCustom ? null : asset);
@@ -1527,7 +1655,7 @@ function openSettings() {
   wipe.addEventListener('click', () => {
     if (Date.now() - wipeArmed < 3500) {
       V.checkpoint(vaultDoc(), 'Antes de borrar').then(() => {
-        replaceAll({ holdings: [] }); replaceSnapshots([]); sheet.close();
+        replaceAll({ holdings: [], watch: [] }); replaceSnapshots([]); sheet.close();
         toast('Portfolio borrado', { action: { label: 'Ver versiones', run: () => { const s = openSheet(versionsView({ close: () => s.close() })); } } });
       });
       return;
@@ -1612,7 +1740,8 @@ function sync() {
   const followed = [...new Set(state.holdings.filter(a => a.kind === 'retire' && a.track).map(a => a.track))]
     .map(sym => STOCKS.find(s => s.sym === sym) || { id: 'stock:' + sym, kind: 'stock', sym, name: sym })
     .filter(a => !held.has(a.id));
-  P.track([...state.holdings, ...[BTC, XAU].filter(a => !held.has(a.id)), ...followed]);
+  const watched = state.watch.filter(a => !held.has(a.id));
+  P.track([...state.holdings, ...[BTC, XAU].filter(a => !held.has(a.id) && !watched.some(w => w.id === a.id)), ...followed, ...watched]);
   rangeSeg.set(state.settings.range);
 }
 
