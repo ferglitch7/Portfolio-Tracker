@@ -108,6 +108,8 @@ function trackName(sym) { return (TRACKS.find(t => t[0] === sym) || [null, sym])
 
 const roller = new Roller($('roller'));
 const rowMap = new Map();    // holding id -> row refs
+const segMap = new Map();    // kind -> allocation segment
+const tsegMap = new Map();   // kind -> target segment
 const chipMap = new Map();   // kind -> legend chip
 let filter = null;           // show only one class when set
 let pillMode = 'range';      // 'range' (follows the chart) | 'total' (vs cost)
@@ -257,107 +259,34 @@ function renderHome() {
   firstPaint = false;
 }
 
-// The split by class as a ring (as in Apple's Battery and Health): one arc per
-// class, the total in the middle, the classes listed beside it. Tapping a class
-// (in the list or on the ring) shows only its assets. With a target set, a thin
-// outer ring shows the target split.
-const RING = { c: 60, r: 46, stroke: 15, tr: 58.5, tstroke: 3 };
-const ringArcs = new Map(), ringGlows = new Map(), ringTargets = new Map();
-
-function svgNode(tag, attrs) {
-  const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
-  for (const k in attrs) el.setAttribute(k, attrs[k]);
-  return el;
-}
-
-// Lay arcs around a circle: [{ key, share }] → dash settings with a small gap.
-function arcsFor(list, r, stroke, gapPx) {
-  const C = 2 * Math.PI * r;
-  const many = list.filter(x => x.share > 0).length > 1;
-  let at = 0;
-  return list.map(x => {
-    const len = C * x.share;
-    const visible = many ? Math.max(0.01, len - gapPx - stroke) : C;
-    const out = { key: x.key, dash: `${visible} ${C}`, offset: -(at + (many ? (gapPx + stroke) / 2 : 0)) };
-    at += len;
-    return out;
-  });
-}
-
 function renderAlloc(v) {
-  const svg = $('ring-svg'), legend = $('alloc-legend');
+  const bar = $('alloc-bar'), tbar = $('alloc-target'), legend = $('alloc-legend');
   const t = targets();
   const rows = plan(v.kinds, v.total, t).filter(x => x.value > 0 || (x.target || 0) > 0);
   rows.sort((x, y) => y.value - x.value || (y.target || 0) - (x.target || 0));
   $('alloc').hidden = v.kinds.length === 0;
   if (filter && !v.kinds.some(k => k[0] === filter)) filter = null;
-  if (!svg.firstChild) {
-    // A soft glow of each arc's colour underneath gives the ring body.
-    const defs = svgNode('defs', {});
-    const glow = svgNode('filter', { id: 'ring-glow', x: '-30%', y: '-30%', width: '160%', height: '160%' });
-    glow.append(svgNode('feGaussianBlur', { stdDeviation: '4' }));
-    defs.append(glow);
-    svg.append(defs);
-    svg.append(svgNode('g', { class: 'ring-glows', filter: 'url(#ring-glow)', transform: `rotate(-90 ${RING.c} ${RING.c})` }));
-    svg.append(svgNode('g', { class: 'ring-arcs', transform: `rotate(-90 ${RING.c} ${RING.c})` }));
-    svg.append(svgNode('g', { class: 'ring-targets', transform: `rotate(-90 ${RING.c} ${RING.c})` }));
-  }
-  const glowsG = svg.children[1], arcsG = svg.children[2], targetsG = svg.children[3];
 
   const live = new Set();
-  const held = rows.filter(x => x.value > 0);
-  const arcs = arcsFor(held.map(x => ({ key: x.kind, share: x.share })), RING.r, RING.stroke, 2.5);
-  arcs.forEach(({ key, dash, offset }) => {
-    let arc = ringArcs.get(key);
-    if (!arc) {
-      arc = svgNode('circle', { class: 'ring-arc', cx: RING.c, cy: RING.c, r: RING.r, 'stroke-width': RING.stroke, stroke: KINDS[key].color });
-      arc.addEventListener('click', () => { filter = filter === key ? null : key; haptic(5); renderHome(); });
-      arcsG.append(arc);
-      ringArcs.set(key, arc);
-    }
-    arc.style.strokeDasharray = dash;
-    arc.style.strokeDashoffset = offset;
-    arc.classList.toggle('on', filter === key);
-    let g = ringGlows.get(key);
-    if (!g) {
-      g = svgNode('circle', { class: 'ring-glow', cx: RING.c, cy: RING.c, r: RING.r, 'stroke-width': RING.stroke, stroke: KINDS[key].color });
-      glowsG.append(g);
-      ringGlows.set(key, g);
-    }
-    g.style.strokeDasharray = dash;
-    g.style.strokeDashoffset = offset;
-    g.classList.toggle('on', filter === key);
-    live.add(key);
-  });
-  for (const [key, arc] of ringArcs) if (!live.has(key)) { arc.remove(); ringArcs.delete(key); }
-  for (const [key, g] of ringGlows) if (!live.has(key)) { g.remove(); ringGlows.delete(key); }
-
-  const tlist = t ? rows.filter(x => x.target > 0).map(x => ({ key: x.kind, share: x.target })) : [];
-  const tlive = new Set();
-  for (const { key, dash, offset } of arcsFor(tlist, RING.tr, RING.tstroke, 2.5)) {
-    let arc = ringTargets.get(key);
-    if (!arc) {
-      arc = svgNode('circle', { class: 'ring-target', cx: RING.c, cy: RING.c, r: RING.tr, 'stroke-width': RING.tstroke, stroke: KINDS[key].color });
-      targetsG.append(arc);
-      ringTargets.set(key, arc);
-    }
-    arc.style.strokeDasharray = dash;
-    arc.style.strokeDashoffset = offset;
-    tlive.add(key);
-  }
-  for (const [key, arc] of ringTargets) if (!tlive.has(key)) { arc.remove(); ringTargets.delete(key); }
-
-  // Middle of the ring: the total, or the class being looked at.
-  const hidden = state.settings.hidden;
-  const sel = filter && rows.find(x => x.kind === filter);
-  $('ring-value').textContent = hidden ? '•••' : F.compactMoney(sel ? sel.value : v.total, ccy(), 1);
-  $('ring-label').textContent = sel ? KINDS[sel.kind].label : rows.filter(x => x.value > 0).length === 1 ? '1 clase' : `${rows.filter(x => x.value > 0).length} clases`;
-  $('alloc-ring').classList.toggle('filtered', !!filter);
-
-  const seen = new Set();
   rows.forEach((x, i) => {
     const kind = x.kind;
-    seen.add(kind);
+    live.add(kind);
+
+    let seg = segMap.get(kind);
+    if (x.value > 0) {
+      if (!seg) { seg = h('div.alloc-seg', { style: { background: KINDS[kind].color } }); bar.append(seg); segMap.set(kind, seg); }
+      seg.style.order = i;
+      seg.style.flex = `${Math.max(x.share, 0.004)} 1 0px`;
+      seg.classList.toggle('on', filter === kind);
+    } else if (seg) { seg.remove(); segMap.delete(kind); }
+
+    let tseg = tsegMap.get(kind);
+    if (t && x.target > 0) {
+      if (!tseg) { tseg = h('div.alloc-seg', { style: { background: KINDS[kind].color } }); tbar.append(tseg); tsegMap.set(kind, tseg); }
+      tseg.style.order = i;
+      tseg.style.flex = `${x.target} 1 0px`;
+    } else if (tseg) { tseg.remove(); tsegMap.delete(kind); }
+
     let chip = chipMap.get(kind);
     if (!chip) {
       chip = h('button.chip', { type: 'button', onclick: () => { filter = filter === kind ? null : kind; haptic(5); renderHome(); } },
@@ -373,7 +302,14 @@ function renderAlloc(v) {
     chip.classList.toggle('on', filter === kind);
     chip.setAttribute('aria-pressed', String(filter === kind));
   });
-  for (const [kind, chip] of chipMap) if (!seen.has(kind)) { chip.remove(); chipMap.delete(kind); }
+  for (const [kind, chip] of chipMap) {
+    if (live.has(kind)) continue;
+    chip.remove(); chipMap.delete(kind);
+    const seg = segMap.get(kind); if (seg) { seg.remove(); segMap.delete(kind); }
+    const tseg = tsegMap.get(kind); if (tseg) { tseg.remove(); tsegMap.delete(kind); }
+  }
+  tbar.hidden = !t;
+  bar.classList.toggle('filtered', !!filter);
   legend.classList.toggle('filtering', !!filter);
   $('btn-targets').classList.toggle('set', !!t);
 }

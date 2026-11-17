@@ -116,11 +116,11 @@ async function start() {
  * A phone page. `seed` (optional) is written as the saved portfolio before the
  * app starts. Returns helpers bound to that page.
  */
-async function phone(env, { seed, extra, hash = '', sw = false, scheme = 'dark', host = null, dpr = 1 } = {}) {
+async function phone(env, { seed, extra, hash = '', sw = false, scheme = 'dark', host = null } = {}) {
   // WebAuthn (the Face ID lock) needs a host name, not an IP address.
   const base = host ? env.base.replace('127.0.0.1', host) : env.base;
   const ctx = await env.browser.newContext({
-    viewport: { width: 402, height: 874 }, deviceScaleFactor: dpr, colorScheme: scheme,
+    viewport: { width: 402, height: 874 }, deviceScaleFactor: 1, colorScheme: scheme,
     hasTouch: true, isMobile: true, locale: 'es-MX', serviceWorkers: sw ? 'allow' : 'block', acceptDownloads: true,
   });
   await ctx.route(url => !url.href.startsWith(base), route => route.fulfill(answer(route.request().url())));

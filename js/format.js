@@ -103,9 +103,9 @@ export function wholeMoney(v, ccy) {
 }
 
 /** Large amounts in short form: $1.37 B. */
-export function compactMoney(v, ccy, digits = 2) {
+export function compactMoney(v, ccy) {
   if (!Number.isFinite(v)) return '—';
-  return nf(`c:${ccy}:${digits}`, { style: 'currency', currency: ccy, currencyDisplay: 'narrowSymbol', notation: 'compact', maximumFractionDigits: digits }).format(v);
+  return nf(`c:${ccy}`, { style: 'currency', currency: ccy, currencyDisplay: 'narrowSymbol', notation: 'compact', maximumFractionDigits: 2 }).format(v);
 }
 
 /**
