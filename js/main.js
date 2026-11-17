@@ -20,6 +20,7 @@ import { snapshots, recordSnapshot, replaceSnapshots } from './snapshots.js';
 import { targets, plan, openTargets } from './targets.js';
 import { loadStats } from './stats.js';
 import { startUpdates, APP_VERSION } from './update.js';
+import { showWhatsNew } from './whatsnew.js';
 import * as V from './vault.js';
 import { renderGoalCard, openGoal } from './goal.js';
 
@@ -247,7 +248,11 @@ function renderHome() {
   // The real history: one record of the balance every half hour the app is open.
   if (has && !isDemo() && !v.loading && recordSnapshot(v.totalUsd)) mirrorNow();
 
-  if (firstPaint) hideSplash();
+  if (firstPaint) {
+    hideSplash();
+    // After an update: what's new, once the launch animation is out of the way.
+    if (!isDemo()) setTimeout(() => showWhatsNew({ returning: state.holdings.length > 0 }), 1500);
+  }
   firstPaint = false;
 }
 

@@ -33,6 +33,11 @@ Sube el mismo número de versión en `version.json` y en `js/update.js`
 (`node --test` falla si no coinciden) y haz push a `main`. GitHub Pages publica
 en uno o dos minutos y la app instalada se actualiza al abrirla.
 
+Si la versión trae algo que contar, añade arriba de `NOTES` en
+`js/whatsnew.js` una entrada con ese número de versión y hasta tres puntos
+cortos: tras actualizarse, la app muestra una tarjeta «Novedades» una sola vez.
+Una versión sin notas (arreglos) se actualiza en silencio.
+
 ## Pruebas
 
 ```

@@ -753,3 +753,27 @@ button.field:active { background: var(--fill); }
 
 /* iOS zooms into any text field under 16px when it gets focus. */
 input.field-input, .search-input, .stepper-input { font-size: 16px; }
+
+/* ---- what's new (after an update) ---- */
+.wn-layer { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-end; justify-content: center; padding: 0 10px calc(var(--safe-b) + 10px); }
+.wn-backdrop { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.38); opacity: 0; transition: opacity 0.3s; }
+.wn-card {
+  position: relative; width: 100%; max-width: 440px; border-radius: 30px; padding: 26px 22px 16px;
+  background: color-mix(in srgb, var(--sheet) 84%, transparent);
+  -webkit-backdrop-filter: blur(40px) saturate(180%); backdrop-filter: blur(40px) saturate(180%);
+  box-shadow: var(--shadow-sheet), inset 0 0.5px 0 var(--glass-edge);
+  display: flex; flex-direction: column; gap: 18px;
+  transform: translate3d(0, 24px, 0) scale(0.97); opacity: 0;
+  transition: transform 0.42s cubic-bezier(0.2, 0.9, 0.25, 1.05), opacity 0.25s;
+}
+.wn-layer.in .wn-backdrop { opacity: 1; }
+.wn-layer.in .wn-card { transform: none; opacity: 1; }
+.wn-title { font: 700 24px/1.1 var(--font-round); letter-spacing: -0.03em; text-align: center; }
+.wn-list { display: flex; flex-direction: column; gap: 16px; }
+.wn-item { display: flex; gap: 14px; align-items: flex-start; }
+.wn-icon { flex: none; width: 34px; height: 34px; display: grid; place-items: center; }
+.wn-icon svg { width: 28px; height: 28px; }
+.wn-text { display: flex; flex-direction: column; gap: 2px; font-size: 13px; line-height: 1.35; color: var(--label-2); }
+.wn-text b { font-size: 14px; color: var(--label); font-weight: 600; }
+.wn-card .btn-primary { margin-top: 4px; }
+@media (prefers-reduced-motion: reduce) { .wn-card, .wn-backdrop { transition: none; } }
