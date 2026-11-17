@@ -108,11 +108,14 @@
         </section>
 
         <section class="alloc" id="alloc" hidden aria-label="Distribución">
-          <div class="alloc-bar" id="alloc-bar"></div>
-          <div class="alloc-bar target" id="alloc-target" hidden aria-label="Distribución objetivo"></div>
-          <div class="alloc-legend" id="alloc-legend">
-            <button class="chip ghost" id="btn-targets" type="button">Objetivo</button>
+          <div class="card alloc-card">
+            <div class="ring" id="alloc-ring">
+              <svg class="ring-svg" id="ring-svg" viewBox="0 0 120 120" aria-hidden="true"></svg>
+              <div class="ring-mid"><b id="ring-value"></b><span id="ring-label"></span></div>
+            </div>
+            <div class="alloc-legend" id="alloc-legend"></div>
           </div>
+          <button class="chip ghost" id="btn-targets" type="button">Objetivo</button>
         </section>
 
         <button class="goal-card" id="goal" type="button" hidden></button>

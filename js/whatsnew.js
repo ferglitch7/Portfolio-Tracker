@@ -18,11 +18,18 @@ const ICON = {
   calendar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>',
   lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg>',
   eye: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+  ring: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 3.5a8.5 8.5 0 0 1 8.4 7.2"/><path d="M20.2 14.6A8.5 8.5 0 0 1 6 18.6"/><path d="M4.2 15.4A8.5 8.5 0 0 1 9 4"/></svg>',
   sparkle: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.6 5.6 1.9-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9z"/><path d="M18.5 15l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></svg>',
 };
 
 /** Newest first. `tone` is a CSS colour variable for the icon. */
 export const NOTES = [
+  {
+    version: '1.2',
+    items: [
+      { icon: 'ring', tone: '--k-crypto', title: 'Distribución en anillo', text: 'Tu reparto por clase, con el total al centro. Toca una clase para ver solo sus activos.' },
+    ],
+  },
   {
     version: '1.1',
     items: [

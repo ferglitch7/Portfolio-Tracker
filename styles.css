@@ -198,15 +198,23 @@ svg { display: block; }
 .pill.down { background: var(--down-bg); color: var(--down); }
 .pill .dim { font-weight: 500; opacity: 0.72; }
 
-/* ---- allocation ---- */
-.alloc { display: flex; flex-direction: column; gap: 12px; }
-.alloc-bar { display: flex; gap: 3px; height: 10px; }
-.alloc-seg {
-  flex: 0 0 auto; min-width: 6px; height: 100%; border-radius: 5px;
-  transition: flex-grow 0.7s var(--ease), opacity 0.3s;
+/* ---- allocation: a ring with the classes beside it ---- */
+.alloc { display: flex; flex-direction: column; gap: 8px; }
+.alloc-card { display: flex; align-items: center; gap: 18px; padding: 14px 18px 14px 14px; }
+.ring { position: relative; width: 116px; height: 116px; flex: none; }
+.ring-svg { width: 100%; height: 100%; overflow: visible; }
+.ring-track { fill: none; stroke: none; }
+.ring-arc, .ring-target {
+  fill: none; stroke-linecap: round;
+  transition: stroke-dasharray 0.7s var(--ease), stroke-dashoffset 0.7s var(--ease), opacity 0.3s;
 }
-.alloc-bar.filtered .alloc-seg:not(.on) { opacity: 0.25; }
-.alloc-legend { display: flex; flex-wrap: wrap; gap: 8px; }
+.ring-arc { cursor: pointer; }
+.ring-target { opacity: 0.5; }
+.ring.filtered .ring-arc:not(.on) { opacity: 0.22; }
+.ring-mid { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; pointer-events: none; }
+.ring-mid b { font: 700 15px/1.1 var(--font-round); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.ring-mid span { font-size: 10.5px; color: var(--label-2); margin-top: 3px; }
+.alloc-legend { display: flex; flex-direction: column; gap: 10px; flex: 1; min-width: 0; }
 .chip {
   display: inline-flex; align-items: center; gap: 7px;
   height: 32px; padding: 0 12px 0 10px; border-radius: 16px;
@@ -568,8 +576,6 @@ button.field:active { background: var(--fill); }
 .chart-note[data-action="1"] { color: var(--tint); cursor: pointer; }
 
 /* ---- target allocation ---- */
-.alloc-bar.target { height: 4px; margin-top: -7px; opacity: 0.5; }
-.alloc-bar.target .alloc-seg { border-radius: 2px; min-width: 3px; }
 .chip em { font-style: normal; font-size: 10px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--label-2); background: var(--fill); padding: 2px 6px; border-radius: 8px; margin-right: -4px; }
 .chip em:empty { display: none; }
 .chip.on em { color: inherit; background: color-mix(in srgb, var(--accent-ink) 18%, transparent); }
@@ -723,8 +729,6 @@ button.field:active { background: var(--fill); }
 #prange .seg-thumb { top: 0; bottom: 0; left: 0; border-radius: 15px; background: var(--fill); box-shadow: none; }
 #prange .seg button { height: 30px; color: var(--label-2); font-size: 13px; }
 #prange .seg button[aria-pressed="true"] { color: var(--label); }
-.alloc { gap: 10px; }
-.alloc-legend { gap: 6px 16px; }
 .alloc-legend .chip {
   height: auto; padding: 0; gap: 6px; background: none; box-shadow: none; border-radius: 0;
   -webkit-backdrop-filter: none; backdrop-filter: none; font-size: 13px; color: var(--label-2);
@@ -735,7 +739,11 @@ button.field:active { background: var(--fill); }
 .alloc-legend .chip.on { background: none; color: var(--label); }
 .alloc-legend .chip.on b { opacity: 1; }
 .alloc-legend.filtering .chip:not(.on) { opacity: 0.4; }
-.alloc-legend .chip.ghost { margin-left: auto; color: var(--tint); font-weight: 600; }
+.alloc-legend .chip { width: 100%; justify-content: flex-start; font-size: 14px; }
+.alloc-legend .chip span { flex: 1; text-align: left; }
+.alloc-legend .chip b { order: 2; }
+.alloc-legend .chip em { order: 1; }
+#btn-targets { align-self: flex-end; height: auto; padding: 2px 4px; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; color: var(--tint); font-weight: 600; font-size: 13px; }
 .perf-card .movers-rows { margin: 4px -6px 0; border-top: 0.5px solid var(--sep); }
 .perf-tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .perf-tile { padding: 10px 8px 9px 10px; min-width: 0; }
