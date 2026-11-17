@@ -48,6 +48,7 @@ export function createChart(host, { onScrub, deferred = false } = {}) {
     <g clip-path="url(#${id}-clip)">
       <path class="chart-area" fill="url(#${id}-fill)"/>
       <path class="chart-line" fill="none"/>
+      <g class="chart-marks"></g>
     </g>
     <circle class="chart-halo" r="9" cx="-20" cy="-20"/>
     <circle class="chart-end" r="3.500" cx="-20" cy="-20"/>
@@ -59,6 +60,8 @@ export function createChart(host, { onScrub, deferred = false } = {}) {
   const q = sel => svg.querySelector(sel);
   const clip = q('clipPath rect'), area = q('.chart-area'), line = q('.chart-line'), base = q('.chart-base');
   const halo = q('.chart-halo'), endDot = q('.chart-end'), cursor = q('.chart-cursor'), dot = q('.chart-dot');
+  const marksG = q('.chart-marks');
+  let marks = [];         // [{ t, kind: 'buy' | 'sell' | 'income', label }] shown on the line
 
   let W = 0, H = 0;
   let data = null;        // resampled points of the current series
@@ -87,9 +90,29 @@ export function createChart(host, { onScrub, deferred = false } = {}) {
     base.setAttribute('x2', W); base.setAttribute('y1', y0); base.setAttribute('y2', y0);
     clip.setAttribute('width', (W + 12) * reveal);
     clip.setAttribute('height', H + 20);
+    paintMarks();
     const ex = xOf(N - 1), ey = yOf(shape[N - 1]);
     const show = reveal >= 1 && !scrubbing;
     for (const c of [halo, endDot]) { c.setAttribute('cx', show ? ex : -20); c.setAttribute('cy', show ? ey : -20); }
+  }
+
+  // Which of the N points a time falls on, or -1 outside the series.
+  function indexOf(t) {
+    if (!data) return -1;
+    const t0 = data[0].t, t1 = data[N - 1].t;
+    if (t < t0 || t > t1 || t1 === t0) return -1;
+    return Math.round(((t - t0) / (t1 - t0)) * (N - 1));
+  }
+  let markSig = '';
+  function paintMarks() {
+    const sig = marks.length + ':' + W + ':' + H + ':' + (shape ? shape.join() : '');
+    if (sig === markSig) return;
+    markSig = sig;
+    marksG.replaceChildren(...marks.map(m => {
+      const i = indexOf(m.t);
+      if (i < 0) return null;
+      return svgEl('circle', { class: `chart-mark ${m.kind}`, r: 4.5, cx: xOf(i), cy: yOf(shape[i]) });
+    }).filter(Boolean));
   }
 
   function measure() {
@@ -110,7 +133,9 @@ export function createChart(host, { onScrub, deferred = false } = {}) {
     dot.setAttribute('cx', x); dot.setAttribute('cy', y);
     if (i !== lastIdx) {
       lastIdx = i;
-      onScrub && onScrub({ t: data[i].t, v: data[i].v, first: data[0].v });
+      // A trade under the finger (within a point either side) is reported too.
+      const mark = marks.find(m => { const j = indexOf(m.t); return j >= 0 && Math.abs(j - i) <= 1; }) || null;
+      onScrub && onScrub({ t: data[i].t, v: data[i].v, first: data[0].v, mark });
     }
   }
   function endScrub() {
@@ -185,6 +210,8 @@ export function createChart(host, { onScrub, deferred = false } = {}) {
       host.classList.toggle('down', v < data[0].v);
       paint();
     },
+    /** Trades to dot on the line: [{ t, kind, label }]. Outside the range they are skipped. */
+    setMarks(list) { marks = list || []; markSig = ''; paintMarks(); },
     get first() { return data ? data[0].v : null; },
     destroy() { ro.disconnect(); if (anim) anim.stop(); if (revealAnim) revealAnim.stop(); svg.remove(); },
   };

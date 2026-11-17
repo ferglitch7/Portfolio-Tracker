@@ -1016,6 +1016,19 @@ const dayInput = ts => { const d = new Date(ts); return `${d.getFullYear()}-${St
 // A date picked without a time is kept at noon, so no time zone moves it a day.
 const fromDayInput = (v, fallback) => { const t = Date.parse(v + 'T12:00:00'); return Number.isFinite(t) ? Math.min(t, Date.now()) : fallback; };
 
+/** The dated trades of a position, as dots for its chart. */
+function tradeMarks(a) {
+  if (!a.tx || a.kind === 'cash') return [];
+  const per = a.kind === 'metal' && UNITS[a.unit] ? UNITS[a.unit].perOz : 1;
+  const unit = a.kind === 'metal' ? (UNITS[a.unit] || UNITS.oz).label : a.sym;
+  return a.tx.filter(tr => !tr.opening && tr.t).map(tr => ({
+    t: tr.t,
+    kind: tr.side,
+    label: tr.side === 'income' && !(tr.qty > 0) ? `${tradeLabel(a, tr)} ${F.money(tr.amount * P.rate(ccy()), ccy())}`
+      : `${tradeLabel(a, tr)} ${F.qty(tr.qty * per)} ${unit}`,
+  }));
+}
+
 /** What an entry is called in the list and on its screen. */
 function tradeLabel(a, tr) {
   if (tr.opening) return a.kind === 'cash' ? 'Saldo inicial' : 'Posición inicial';
@@ -1341,6 +1354,7 @@ function openDetail(id, { edit = false } = {}) {
   const opsGroup = trades && h('div.group.ops');
   const opsTitle = trades && h('div.group-title', { text: a0.kind === 'cash' ? 'Movimientos' : 'Operaciones' });
   let opsSig = '';
+  const marksKey = h('div.marks-key', { hidden: true });
   const vApy = fv(), apyNote = h('p.hint');
   const apyGroup = a0.kind === 'cash' && h('div.group', null,
     h('button.field', { type: 'button', id: 'apy-field', onclick: () => { const v = apyView(sheet, id); sheet.push(v); v.focus(); } },
@@ -1370,7 +1384,7 @@ function openDetail(id, { edit = false } = {}) {
       big.textContent = F.price(scrub.v * r, ccy());
       setPill(pill, scrub.v / scrub.first - 1, null, null);
       pill.hidden = false;
-      meta.textContent = F.timeLabel(scrub.t, range);
+      meta.textContent = scrub.mark ? `${scrub.mark.label} · ${F.date(scrub.mark.t)}` : F.timeLabel(scrub.t, range);
     } else {
       // Cash has no price worth showing: its balance is the number.
       big.textContent = !q ? '—' : a.kind === 'cash' ? F.money(q.p * a.qty * r, ccy()) : F.price(q.p * r, ccy());
@@ -1416,6 +1430,12 @@ function openDetail(id, { edit = false } = {}) {
     const sig = JSON.stringify([a.tx || null, a.unit, ccy(), r, state.settings.numbers]);
     if (sig === opsSig) return;
     opsSig = sig;
+    const dots = tradeMarks(a);
+    if (chart) chart.setMarks(dots);
+    // A small key under the chart once there is something dotted on it.
+    const kinds = [...new Set(dots.map(m => m.kind))];
+    marksKey.hidden = !kinds.length;
+    marksKey.replaceChildren(...kinds.map(k => h('span', null, h('i.' + k), { buy: 'Compras', sell: 'Ventas', income: INCOME[a.kind] === 'Dividendo' ? 'Dividendos' : 'Recompensas' }[k])));
     const isCash = a.kind === 'cash';
     const per = a.kind === 'metal' && UNITS[a.unit] ? UNITS[a.unit].perOz : 1;
     const unitLabel = a.kind === 'metal' ? (UNITS[a.unit] || UNITS.oz).label : a.sym;
@@ -1462,6 +1482,7 @@ function openDetail(id, { edit = false } = {}) {
       return;
     }
     chart.setData(H.windowed(a, got.pts, range));
+    chart.setMarks(tradeMarks(a));
     approx.hidden = !got.approx;
     if (got.approx) approx.textContent = `Histórico aproximado a partir ${H.proxyOf(a)}.`;
     paint();
@@ -1481,7 +1502,7 @@ function openDetail(id, { edit = false } = {}) {
     body: [
       h('div.detail-top', null, logo(a0), h('div', null, nameEl, symEl)),
       h('div.detail-price', null, big, h('div.detail-meta', null, pill, meta)),
-      chartHost, chartHost && seg.el, approx, needKey,
+      chartHost, chartHost && seg.el, chartHost && marksKey, approx, needKey,
       h('div.group', null,
         a0.kind !== 'custom' && a0.kind !== 'retire' && fieldRow('Cantidad', vQty), fieldRow('Valor', vVal),
         a0.kind !== 'cash' && fieldRow(a0.kind === 'custom' ? 'Costo' : a0.kind === 'retire' ? 'Total aportado' : 'Costo promedio', vCost),

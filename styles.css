@@ -793,3 +793,12 @@ input.field-input, .search-input, .stepper-input { font-size: 16px; }
 }
 #curtain.on { opacity: 1; transition: none; }
 .curtain-mark { width: 76px; height: 76px; filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.35)); }
+
+/* trades on a chart */
+.chart-mark { stroke: var(--sheet); stroke-width: 2.5; }
+.marks-key { display: flex; justify-content: center; gap: 14px; font-size: 11px; color: var(--label-2); margin-top: -6px; }
+.marks-key i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: 0; }
+.marks-key .buy { background: var(--up); } .marks-key .sell { background: var(--down); } .marks-key .income { background: var(--k-stock); }
+.chart-mark.buy { fill: var(--up); }
+.chart-mark.sell { fill: var(--down); }
+.chart-mark.income { fill: var(--k-stock); }
