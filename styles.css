@@ -201,9 +201,11 @@ svg { display: block; }
 /* ---- allocation: a ring with the classes beside it ---- */
 .alloc { display: flex; flex-direction: column; gap: 8px; }
 .alloc-card { display: flex; align-items: center; gap: 18px; padding: 14px 18px 14px 14px; }
-.ring { position: relative; width: 116px; height: 116px; flex: none; }
-.ring-svg { width: 100%; height: 100%; overflow: visible; }
-.ring-track { fill: none; stroke: none; }
+.ring { position: relative; width: 128px; height: 128px; flex: none; }
+.ring-svg { width: 100%; height: 100%; overflow: visible; shape-rendering: geometricPrecision; }
+.ring-glow { fill: none; stroke-linecap: round; opacity: 0.45; transition: stroke-dasharray 0.7s var(--ease), stroke-dashoffset 0.7s var(--ease), opacity 0.3s; }
+.ring.filtered .ring-glow:not(.on) { opacity: 0; }
+@media (prefers-color-scheme: light) { .ring-glow { opacity: 0.3; } }
 .ring-arc, .ring-target {
   fill: none; stroke-linecap: round;
   transition: stroke-dasharray 0.7s var(--ease), stroke-dashoffset 0.7s var(--ease), opacity 0.3s;
@@ -212,8 +214,8 @@ svg { display: block; }
 .ring-target { opacity: 0.5; }
 .ring.filtered .ring-arc:not(.on) { opacity: 0.22; }
 .ring-mid { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; pointer-events: none; }
-.ring-mid b { font: 700 15px/1.1 var(--font-round); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
-.ring-mid span { font-size: 10.5px; color: var(--label-2); margin-top: 3px; }
+.ring-mid b { font: 700 16px/1.1 var(--font-round); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.ring-mid span { font-size: 11px; color: var(--label-2); margin-top: 3px; }
 .alloc-legend { display: flex; flex-direction: column; gap: 10px; flex: 1; min-width: 0; }
 .chip {
   display: inline-flex; align-items: center; gap: 7px;

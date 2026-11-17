@@ -261,8 +261,8 @@ function renderHome() {
 // class, the total in the middle, the classes listed beside it. Tapping a class
 // (in the list or on the ring) shows only its assets. With a target set, a thin
 // outer ring shows the target split.
-const RING = { c: 60, r: 47.5, stroke: 13, tr: 58.5, tstroke: 3 };
-const ringArcs = new Map(), ringTargets = new Map();
+const RING = { c: 60, r: 46, stroke: 15, tr: 58.5, tstroke: 3 };
+const ringArcs = new Map(), ringGlows = new Map(), ringTargets = new Map();
 
 function svgNode(tag, attrs) {
   const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
@@ -292,11 +292,17 @@ function renderAlloc(v) {
   $('alloc').hidden = v.kinds.length === 0;
   if (filter && !v.kinds.some(k => k[0] === filter)) filter = null;
   if (!svg.firstChild) {
-    svg.append(svgNode('circle', { class: 'ring-track', cx: RING.c, cy: RING.c, r: RING.r, 'stroke-width': RING.stroke }));
+    // A soft glow of each arc's colour underneath gives the ring body.
+    const defs = svgNode('defs', {});
+    const glow = svgNode('filter', { id: 'ring-glow', x: '-30%', y: '-30%', width: '160%', height: '160%' });
+    glow.append(svgNode('feGaussianBlur', { stdDeviation: '4' }));
+    defs.append(glow);
+    svg.append(defs);
+    svg.append(svgNode('g', { class: 'ring-glows', filter: 'url(#ring-glow)', transform: `rotate(-90 ${RING.c} ${RING.c})` }));
     svg.append(svgNode('g', { class: 'ring-arcs', transform: `rotate(-90 ${RING.c} ${RING.c})` }));
     svg.append(svgNode('g', { class: 'ring-targets', transform: `rotate(-90 ${RING.c} ${RING.c})` }));
   }
-  const arcsG = svg.children[1], targetsG = svg.children[2];
+  const glowsG = svg.children[1], arcsG = svg.children[2], targetsG = svg.children[3];
 
   const live = new Set();
   const held = rows.filter(x => x.value > 0);
@@ -312,9 +318,19 @@ function renderAlloc(v) {
     arc.style.strokeDasharray = dash;
     arc.style.strokeDashoffset = offset;
     arc.classList.toggle('on', filter === key);
+    let g = ringGlows.get(key);
+    if (!g) {
+      g = svgNode('circle', { class: 'ring-glow', cx: RING.c, cy: RING.c, r: RING.r, 'stroke-width': RING.stroke, stroke: KINDS[key].color });
+      glowsG.append(g);
+      ringGlows.set(key, g);
+    }
+    g.style.strokeDasharray = dash;
+    g.style.strokeDashoffset = offset;
+    g.classList.toggle('on', filter === key);
     live.add(key);
   });
   for (const [key, arc] of ringArcs) if (!live.has(key)) { arc.remove(); ringArcs.delete(key); }
+  for (const [key, g] of ringGlows) if (!live.has(key)) { g.remove(); ringGlows.delete(key); }
 
   const tlist = t ? rows.filter(x => x.target > 0).map(x => ({ key: x.kind, share: x.target })) : [];
   const tlive = new Set();
@@ -334,7 +350,7 @@ function renderAlloc(v) {
   // Middle of the ring: the total, or the class being looked at.
   const hidden = state.settings.hidden;
   const sel = filter && rows.find(x => x.kind === filter);
-  $('ring-value').textContent = hidden ? '•••' : F.compactMoney(sel ? sel.value : v.total, ccy());
+  $('ring-value').textContent = hidden ? '•••' : F.compactMoney(sel ? sel.value : v.total, ccy(), 1);
   $('ring-label').textContent = sel ? KINDS[sel.kind].label : rows.filter(x => x.value > 0).length === 1 ? '1 clase' : `${rows.filter(x => x.value > 0).length} clases`;
   $('alloc-ring').classList.toggle('filtered', !!filter);
 
