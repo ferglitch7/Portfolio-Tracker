@@ -491,6 +491,8 @@ button.field:active { background: var(--fill); }
 
 /* ---- trades ---- */
 .op { min-height: 56px; text-align: left; }
+.date-field .date-shown { color: var(--label); }
+.date-field input[type="date"] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; -webkit-appearance: none; appearance: none; cursor: pointer; }
 .op-main, .op-side { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .op-main { flex: 1; }
 .op-side { align-items: flex-end; font-variant-numeric: tabular-nums; }
@@ -500,7 +502,7 @@ button.field:active { background: var(--fill); }
 .op-when, .op-at { font-size: 12px; color: var(--label-2); }
 .op-qty { font-size: 14px; }
 .op-add .field-label { color: var(--tint); }
-.sheet-scroll > .seg:first-child { align-self: center; width: 220px; }
+.sheet-scroll > .seg:first-child { align-self: center; width: min(100%, 300px); }
 
 /* ---- asset detail ---- */
 .detail-top { display: flex; align-items: center; gap: 12px; }

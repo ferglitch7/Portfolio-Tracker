@@ -35,3 +35,12 @@ test('the notes are short and none is newer than the app', () => {
     for (const it of n.items) assert.ok(it.title.length <= 32 && it.text.length <= 140, it.title);
   }
 });
+
+test('numbered versions: 1.9 then 2.0; any of them is newer than the old dated ones', () => {
+  assert.equal(newer('2.0', '1.9'), true);
+  assert.equal(newer('1.2', '1.1'), true);
+  assert.equal(newer('1.0', '2026.11.17-2'), true);
+  assert.equal(newer('2026.11.17-2', '1.0'), false);
+  const notes = [{ version: '1.0', items: [{ title: 'N' }] }, { version: '2026.11.17-1', items: [{ title: 'O' }] }];
+  assert.deepEqual(notesFor('2026.11.17-2', '1.0', true, notes).items.map(i => i.title), ['N'], 'someone on the dated app sees only what 1.0 brings');
+});

@@ -2,7 +2,8 @@
 // worth telling. Releases without notes (fixes) update silently.
 //
 // To announce a release: add an entry at the top of NOTES with the version that
-// ships it (the same as version.json) and at most three short items.
+// ships it (the same as version.json: 1.1, 1.2 … 1.9, 2.0) and at most three
+// short items.
 
 import { h, haptic, reduceMotion } from './motion.js';
 import { APP_VERSION } from './update.js';
@@ -14,11 +15,19 @@ const ICON = {
   percent: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18.5 5.5l-13 13"/><circle cx="7" cy="7" r="2.4"/><circle cx="17" cy="17" r="2.4"/></svg>',
   keyboard: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="12" rx="2.5"/><path d="M6.5 10h.01M10 10h.01M14 10h.01M17.5 10h.01M8 14.2h8"/></svg>',
   chart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 16.5l5-5 3.5 3.5 8-8"/><path d="M15 7h5v5"/></svg>',
+  calendar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>',
   sparkle: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.6 5.6 1.9-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9z"/><path d="M18.5 15l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></svg>',
 };
 
 /** Newest first. `tone` is a CSS colour variable for the icon. */
 export const NOTES = [
+  {
+    version: '1.0',
+    items: [
+      { icon: 'sparkle', tone: '--tint', title: 'Versión 1.0', text: 'Las versiones ahora van por número: 1.1, 1.2… y después de 1.9 llega la 2.0.' },
+      { icon: 'calendar', tone: '--k-stock', title: 'Fechas MM/DD/YYYY', text: 'Todas las fechas se muestran como mes/día/año.' },
+    ],
+  },
   {
     version: '2026.11.17-1',
     items: [
@@ -29,9 +38,13 @@ export const NOTES = [
   },
 ];
 
-// 2026.11.17-1 → [2026, 11, 17, 1], so -10 sorts after -9.
+// Versions are numbers: 1.0, 1.1 … 1.9, then 2.0. Compared as numbers, so
+// 1.10 would still sort after 1.9. Before 1.0 the app used dates
+// (2026.11.17-2): those are all older than any numbered version.
+const legacy = v => /^\d{4}\./.test(String(v));
 const parts = v => String(v).split(/[.-]/).map(Number);
 export function newer(a, b) {
+  if (legacy(a) !== legacy(b)) return legacy(b);
   const x = parts(a), y = parts(b);
   for (let i = 0; i < Math.max(x.length, y.length); i++) {
     const d = (x[i] || 0) - (y[i] || 0);

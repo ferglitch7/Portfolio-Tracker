@@ -18,3 +18,8 @@ test('the offline shell lists every script the app loads', () => {
   const scripts = fs.readdirSync(new URL('../js/', import.meta.url)).filter(f => f.endsWith('.js'));
   for (const f of scripts) assert.ok(sw.includes(`'js/${f}'`), `sw.js SHELL misses js/${f}`);
 });
+
+test('the version is a number like 1.0, 1.9 or 2.0', () => {
+  const json = JSON.parse(fs.readFileSync(new URL('../version.json', import.meta.url), 'utf8'));
+  assert.match(json.version, /^\d+\.\d$/);
+});

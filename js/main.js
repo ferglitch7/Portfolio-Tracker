@@ -916,6 +916,12 @@ function tradeView(sheet, id, trade, { side: side0 = 'buy' } = {}) {
   const qtyInput = h('input.amt-input', { id: 'tr-qty', type: 'text', inputmode: 'decimal', placeholder: '0', autocomplete: 'off', 'aria-label': 'Cantidad' });
   const priceInput = h('input.field-input', { id: 'tr-price', type: 'text', inputmode: 'decimal', autocomplete: 'off', placeholder: opening ? 'Opcional' : '0' });
   const dateInput = h('input.field-input', { id: 'tr-date', type: 'date', max: dayInput(Date.now()), value: dayInput(trade && trade.t ? trade.t : Date.now()) });
+  // The picker is the system one; what shows is always MM/DD/YYYY.
+  const dateShown = h('span.field-value.date-shown');
+  const paintDate = () => { const t = fromDayInput(dateInput.value, null); dateShown.textContent = t ? F.date(t) : ''; };
+  dateInput.addEventListener('change', paintDate);
+  dateInput.addEventListener('input', paintDate);
+  paintDate();
   const unitEl = h('span.amt-unit');
   const valueEl = h('div.amt-value');
   const hint = h('p.hint', { style: { textAlign: 'center' } });
@@ -1031,7 +1037,7 @@ function tradeView(sheet, id, trade, { side: side0 = 'buy' } = {}) {
       h('div.amt-top', null, logo(a), h('div.amt-name', { text: a.name }), priceEl),
       h('div.amt-entry', null, h('div.amt-line', null, qtyInput, unitEl), valueEl),
       h('div.group', null, priceRow,
-        opening ? null : h('label.field', null, h('span.field-label', { text: 'Fecha' }), dateInput)),
+        opening ? null : h('label.field.date-field', null, h('span.field-label', { text: 'Fecha' }), dateShown, dateInput)),
       hint,
       opening ? h('p.hint', { text: 'Lo que ya tenías antes de registrar movimientos.', style: { textAlign: 'center' } }) : null,
       remove ? h('div.detail-actions', null, remove) : null,
@@ -1460,7 +1466,7 @@ function versionsView(sheet) {
     if (!list.length) { group.replaceWith(h('p.hint', { text: 'Todavía no hay versiones. Se crea una cada día que abres la app.' })); return; }
     group.replaceChildren(...list.map(ver => {
       const value = h('span', { text: `${ver.count} ${ver.count === 1 ? 'activo' : 'activos'}` });
-      const when = new Date(ver.t).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+      const when = F.dateTime(ver.t);
       let armed = 0;
       return h('button.field', {
         type: 'button',

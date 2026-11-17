@@ -124,7 +124,7 @@ async function phone(env, { seed, extra, hash = '', sw = false, scheme = 'dark' 
   await ctx.route(url => !url.href.startsWith(env.base), route => route.fulfill(answer(route.request().url())));
   await ctx.routeWebSocket(/.*/, ws => ws.close());
   // The "Novedades" card would cover the screen: tests start as if already seen.
-  await ctx.addInitScript(() => { if (!localStorage.getItem('portfolio.seenVersion')) localStorage.setItem('portfolio.seenVersion', '9999.1.1-1'); });
+  await ctx.addInitScript(() => { if (!localStorage.getItem('portfolio.seenVersion')) localStorage.setItem('portfolio.seenVersion', '999.9'); });
   if (seed) await ctx.addInitScript(s => { if (!localStorage.getItem('portfolio.v1')) localStorage.setItem('portfolio.v1', JSON.stringify(s)); }, seed);
   if (extra) await ctx.addInitScript(extra);
   const p = await ctx.newPage();

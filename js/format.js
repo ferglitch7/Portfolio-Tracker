@@ -196,9 +196,20 @@ export function editable(v) {
   return s.includes('e') ? v.toFixed(8).replace(/0+$/, '').replace('.', dec) : s.replace('.', dec);
 }
 
-export function dateLabel(ts) {
-  return new Date(ts).toLocaleDateString(LOCALE, { day: 'numeric', month: 'short' });
+/** Dates are always month/day/year: 11/17/2026. */
+export function date(ts) {
+  const d = new Date(ts);
+  return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${d.getFullYear()}`;
 }
+
+export const dateLabel = date;
+
+function clock(d) {
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+/** Date and time: 11/17/2026 14:05. */
+export function dateTime(ts) { return `${date(ts)} ${clock(new Date(ts))}`; }
 
 /** "hace 3 min", "hace 2 h", or a date for anything older than a day. */
 export function ago(ts) {
@@ -211,7 +222,7 @@ export function ago(ts) {
 
 export function timeLabel(ts, range) {
   const d = new Date(ts);
-  if (range === '1D') return d.toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit' });
-  if (range === '1S') return d.toLocaleString(LOCALE, { weekday: 'short', hour: '2-digit', minute: '2-digit' });
-  return d.toLocaleDateString(LOCALE, { day: 'numeric', month: 'short', year: range === '1A' ? 'numeric' : undefined });
+  if (range === '1D') return clock(d);
+  if (range === '1S') return dateTime(ts);
+  return date(ts);
 }

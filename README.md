@@ -30,7 +30,8 @@ node serve.mjs          # http://localhost:4173
 ## Publicar un cambio
 
 Sube el mismo número de versión en `version.json` y en `js/update.js`
-(`node --test` falla si no coinciden) y haz push a `main`. GitHub Pages publica
+(`node --test` falla si no coinciden). Las versiones van 1.0, 1.1 … 1.9 y
+después 2.0. Sube también `CACHE` en `sw.js` y haz push a `main`. GitHub Pages publica
 en uno o dos minutos y la app instalada se actualiza al abrirla.
 
 Si la versión trae algo que contar, añade arriba de `NOTES` en

@@ -201,3 +201,12 @@ test('an imported file with a broken trade list keeps the position', () => {
   assert.equal(btc.tx, undefined); assert.equal(btc.qty, 2);
   assert.equal(eth.qty, 3, 'quantity follows the trades'); assert.equal(eth.cost, 5);
 });
+
+test('dates read month/day/year', () => {
+  const t = new Date(2026, 10, 7, 9, 5).getTime();
+  assert.equal(F.date(t), '11/07/2026');
+  assert.equal(F.dateLabel(t), '11/07/2026');
+  assert.equal(F.dateTime(t), '11/07/2026 09:05');
+  assert.equal(F.timeLabel(t, '1A'), '11/07/2026');
+  assert.equal(F.timeLabel(t, '1D'), '09:05');
+});
