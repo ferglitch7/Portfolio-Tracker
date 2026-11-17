@@ -116,12 +116,14 @@ async function start() {
  * A phone page. `seed` (optional) is written as the saved portfolio before the
  * app starts. Returns helpers bound to that page.
  */
-async function phone(env, { seed, extra, hash = '', sw = false, scheme = 'dark' } = {}) {
+async function phone(env, { seed, extra, hash = '', sw = false, scheme = 'dark', host = null } = {}) {
+  // WebAuthn (the Face ID lock) needs a host name, not an IP address.
+  const base = host ? env.base.replace('127.0.0.1', host) : env.base;
   const ctx = await env.browser.newContext({
     viewport: { width: 402, height: 874 }, deviceScaleFactor: 1, colorScheme: scheme,
     hasTouch: true, isMobile: true, locale: 'es-MX', serviceWorkers: sw ? 'allow' : 'block', acceptDownloads: true,
   });
-  await ctx.route(url => !url.href.startsWith(env.base), route => route.fulfill(answer(route.request().url())));
+  await ctx.route(url => !url.href.startsWith(base), route => route.fulfill(answer(route.request().url())));
   await ctx.routeWebSocket(/.*/, ws => ws.close());
   // The "Novedades" card would cover the screen: tests start as if already seen.
   await ctx.addInitScript(() => { if (!localStorage.getItem('portfolio.seenVersion')) localStorage.setItem('portfolio.seenVersion', '999.9'); });
@@ -131,7 +133,7 @@ async function phone(env, { seed, extra, hash = '', sw = false, scheme = 'dark' 
   const errors = [];
   p.on('pageerror', e => errors.push(e.message));
   p.on('console', m => { if (m.type() === 'error' && !/Failed to load resource|vibrate/.test(m.text())) errors.push(m.text()); });
-  await p.goto(env.base + hash);
+  await p.goto(base + hash);
   const cdp = await ctx.newCDPSession(p);
 
   const h = {

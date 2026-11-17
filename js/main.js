@@ -22,6 +22,7 @@ import { loadStats } from './stats.js';
 import { startUpdates, APP_VERSION } from './update.js';
 import { showWhatsNew, showLatest } from './whatsnew.js';
 import { startPrivacy } from './privacy.js';
+import { startLock, lockEnabled, lockSupported, enableLock, disableLock } from './lock.js';
 import * as V from './vault.js';
 import { renderGoalCard, openGoal } from './goal.js';
 
@@ -1651,6 +1652,14 @@ function openSettings() {
   let sheet = null, wipeArmed = 0;
   const ccyValue = h('span', { text: ccy() });
   const hide = toggle(state.settings.hidden, on => setSetting('hidden', on), 'Ocultar importes');
+  // Face ID lock: only offered where the iPhone can check its owner.
+  const lockSwitch = toggle(lockEnabled(), async on => {
+    const ok = on ? await enableLock() : await disableLock();
+    if (!ok) { lockSwitch.set(!on); toast(on ? 'No se pudo activar el bloqueo' : 'Hace falta tu Face ID para quitarlo'); return; }
+    toast(on ? 'Bloqueo con Face ID activado' : 'Bloqueo desactivado');
+  }, 'Bloqueo con Face ID');
+  const lockRow = h('div.field', { id: 'lock-row', hidden: true }, h('span.field-label', { text: 'Bloqueo con Face ID' }), h('span.field-value'), lockSwitch.el);
+  lockSupported().then(ok => { lockRow.hidden = !ok; });
   const byValue = toggle(!state.settings.order, on => { if (on) setSetting('order', null); else byValue.set(true); }, 'Ordenar activos por valor');
   const numbers = segmented([['dot', '1.234,50'], ['comma', '1,234.50']], state.settings.numbers || 'dot', s => setSetting('numbers', s));
 
@@ -1692,6 +1701,7 @@ function openSettings() {
       h('div.group', null,
         fieldButton('Moneda', { value: ccyValue, chevron: true, onclick: () => sheet.push(currencyView(sheet)) }),
         h('div.field', null, h('span.field-label', { text: 'Ocultar importes' }), h('span.field-value'), hide.el),
+        lockRow,
         h('div.field', null, h('span.field-label', { text: 'Ordenar por valor' }), h('span.field-value'), byValue.el),
         h('div.field.numbers', null, h('span.field-label', { text: 'Números' }), h('span.field-value'), numbers.el)),
       h('p.hint', { text: 'Para mover un activo, mantenlo pulsado y arrástralo. Al hacerlo, el orden por valor se desactiva.' }),
@@ -1866,6 +1876,7 @@ renderHome();
 
 startUpdates();
 startPrivacy();
+startLock();
 
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
   navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => { /* the app works without it */ });

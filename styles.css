@@ -802,3 +802,20 @@ input.field-input, .search-input, .stepper-input { font-size: 16px; }
 .chart-mark.buy { fill: var(--up); }
 .chart-mark.sell { fill: var(--down); }
 .chart-mark.income { fill: var(--k-stock); }
+
+/* Face ID lock: above everything, including the privacy curtain */
+#lock {
+  position: fixed; inset: 0; z-index: 95; display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+  padding: calc(var(--safe-t) + 22vh) 24px calc(var(--safe-b) + 24px);
+  background: color-mix(in srgb, var(--bg) 70%, transparent);
+  -webkit-backdrop-filter: blur(34px) saturate(150%); backdrop-filter: blur(34px) saturate(150%);
+  transition: opacity 0.3s;
+}
+#lock.out { opacity: 0; pointer-events: none; }
+.lock-body { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+.lock-icon { width: 54px; height: 54px; display: grid; place-items: center; border-radius: 50%; background: var(--fill); color: var(--label); }
+.lock-icon svg { width: 26px; height: 26px; }
+.lock-title { font: 700 20px/1.2 var(--font-round); letter-spacing: -0.02em; }
+.lock-msg { font-size: 13px; color: var(--label-2); min-height: 18px; }
+.lock-foot { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 4px; align-items: stretch; }
+html.locked #app { visibility: hidden; }

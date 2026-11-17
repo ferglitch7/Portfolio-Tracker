@@ -7,7 +7,12 @@ puedes además registrar compras y ventas con fecha: la cantidad y el costo
 promedio salen de ellas y se calcula la ganancia realizada. También guarda
 dividendos (acciones) y recompensas de staking (crypto). El Cash puede tener una
 tasa anual (APY): cada mes la app abona sola el interés al saldo, como una
-cuenta de ahorro. Lo cobrado en los últimos 12 meses se suma en Rendimiento. No hay conexión a
+cuenta de ahorro. Lo cobrado en los últimos 12 meses se suma en Rendimiento.
+
+También: lista de **Seguimiento** (activos que no tienes, con precio y
+gráfico), tus compras y ventas como puntos en el gráfico de cada activo,
+**bloqueo con Face ID** (una llave de acceso del iPhone; no cifra los datos,
+es una pantalla de privacidad) y la app se difumina en el selector de apps. No hay conexión a
 brokers ni wallets.
 
 Son archivos estáticos: sin backend, sin build y sin nada corriendo en tu PC.
