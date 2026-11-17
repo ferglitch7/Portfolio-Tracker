@@ -7,7 +7,7 @@ const SHELL = [
   'js/main.js', 'js/store.js', 'js/prices.js', 'js/format.js', 'js/catalog.js', 'js/catalog-data.js',
   'js/motion.js', 'js/logo.js', 'js/chart.js', 'js/sheet.js', 'js/ui.js', 'js/history.js', 'js/series.js',
   'js/snapshots.js', 'js/targets.js', 'js/stats.js', 'js/update.js', 'js/vault.js', 'js/goal.js', 'js/goal-math.js',
-  'js/trades.js', 'js/whatsnew.js',
+  'js/trades.js', 'js/whatsnew.js', 'js/privacy.js',
   'icons/icon-192.png', 'icons/apple-touch-icon.png',
 ];
 

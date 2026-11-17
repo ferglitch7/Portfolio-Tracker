@@ -781,3 +781,13 @@ input.field-input, .search-input, .stepper-input { font-size: 16px; }
 .wn-text b { font-size: 14px; color: var(--label); font-weight: 600; }
 .wn-card .btn-primary { margin-top: 4px; }
 @media (prefers-reduced-motion: reduce) { .wn-card, .wn-backdrop { transition: none; } }
+
+/* ---- privacy curtain (app switcher) and lock ---- */
+#curtain {
+  position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; pointer-events: none;
+  background: color-mix(in srgb, var(--bg) 55%, transparent);
+  -webkit-backdrop-filter: blur(28px) saturate(140%); backdrop-filter: blur(28px) saturate(140%);
+  opacity: 0; transition: opacity 0.25s;
+}
+#curtain.on { opacity: 1; transition: none; }
+.curtain-mark { width: 76px; height: 76px; filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.35)); }

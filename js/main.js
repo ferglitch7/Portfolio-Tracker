@@ -21,6 +21,7 @@ import { targets, plan, openTargets } from './targets.js';
 import { loadStats } from './stats.js';
 import { startUpdates, APP_VERSION } from './update.js';
 import { showWhatsNew, showLatest } from './whatsnew.js';
+import { startPrivacy } from './privacy.js';
 import * as V from './vault.js';
 import { renderGoalCard, openGoal } from './goal.js';
 
@@ -1714,6 +1715,7 @@ P.start();
 renderHome();
 
 startUpdates();
+startPrivacy();
 
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
   navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => { /* the app works without it */ });
