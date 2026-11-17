@@ -21,6 +21,13 @@ rendimiento ni la meta.
   se quiere el patrimonio neto (activos − deudas), se monta encima.
 - Esfuerzo: ~45 min–1 h. Modelo: Sonnet, effort medio.
 
+## Barra de distribución: revisar el diseño
+
+**Pedido (11/17/2026):** hablar de la barra de distribución del inicio y ver si
+hay otro diseño mejor. Al retomarlo: mostrar 3–4 alternativas en una imagen
+(p. ej. anillo/donut, barras por clase, lista con %, desglose por activo al
+tocarla) para elegir, como se hizo con los sellos de Cash.
+
 ## Otras ideas propuestas (sin decidir)
 
 - **Comisiones en compras y ventas** (campo opcional): costo promedio y ganancia
