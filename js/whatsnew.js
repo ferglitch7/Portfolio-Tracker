@@ -64,10 +64,20 @@ export function showWhatsNew({ returning }) {
   open(notes);
 }
 
+/** The latest notes again, from Ajustes. False when there are none. */
+export function showLatest() {
+  const n = NOTES.find(x => !newer(x.version, APP_VERSION));
+  if (!n) return false;
+  open({ version: n.version, items: n.items.slice(0, 3) });
+  return true;
+}
+
 function open(notes) {
   const btn = h('button.btn-primary', { type: 'button', text: 'Continuar' });
   const card = h('div.wn-card', { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'wn-title' },
-    h('div.wn-title', { id: 'wn-title', text: 'Novedades' }),
+    h('div.wn-head', null,
+      h('div.wn-title', { id: 'wn-title', text: 'Novedades' }),
+      h('div.wn-version', { text: `Versión ${APP_VERSION}` })),
     h('div.wn-list', null, notes.items.map(it => h('div.wn-item', null,
       h('span.wn-icon', { html: ICON[it.icon] || ICON.sparkle, style: { color: `var(${it.tone || '--tint'})` } }),
       h('div.wn-text', null, h('b', { text: it.title }), h('span', { text: it.text })),

@@ -20,7 +20,7 @@ import { snapshots, recordSnapshot, replaceSnapshots } from './snapshots.js';
 import { targets, plan, openTargets } from './targets.js';
 import { loadStats } from './stats.js';
 import { startUpdates, APP_VERSION } from './update.js';
-import { showWhatsNew } from './whatsnew.js';
+import { showWhatsNew, showLatest } from './whatsnew.js';
 import * as V from './vault.js';
 import { renderGoalCard, openGoal } from './goal.js';
 
@@ -1562,7 +1562,8 @@ function openSettings() {
       fileInput,
       h('p.hint', { text: 'Todo se guarda solo y al instante en este iPhone, con una segunda copia interna y versiones diarias. Si borras la app de la pantalla de inicio se pierde todo: guarda una copia en Archivos (iCloud Drive). Si hay cambios sin copiar, la app te lo recuerda cada semana.' }),
       h('p.hint', { text: 'Precios de Coinbase, CoinGecko, gold-api.com, Finnhub, Twelve Data y open.er-api.com.' }),
-      h('p.hint.version', { text: `Versión ${APP_VERSION}` }),
+      h('p.hint.version', null, `Versión ${APP_VERSION} · `,
+        h('button', { type: 'button', id: 'set-whatsnew', text: 'Novedades', onclick: () => showLatest() })),
     ],
   });
   view.onShow = () => { ccyValue.textContent = ccy(); hide.set(state.settings.hidden); byValue.set(!state.settings.order); };
