@@ -32,6 +32,16 @@ node serve.mjs          # http://localhost:4173
 
 `http://localhost:4173/#demo` abre un portfolio de ejemplo que no se guarda.
 
+## Idioma y tema
+
+En español o inglés (Ajustes → Idioma). La app está escrita en español y
+`js/i18n.js` traduce al inglés todo lo que llega a la pantalla, con un
+diccionario de frases y patrones para las que llevan números o nombres. Un
+texto nuevo necesita su entrada en ese diccionario; la prueba
+`tests/e2e/english.e2e.cjs` recorre la app en inglés y lista cualquier texto que
+siga en español. El tema (Ajustes → Tema) sigue al iPhone o se fija en claro u
+oscuro.
+
 ## Publicar un cambio
 
 Sube el mismo número de versión en `version.json` y en `js/update.js`

@@ -19,11 +19,21 @@ const ICON = {
   lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg>',
   eye: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></svg>',
   ring: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 3.5a8.5 8.5 0 0 1 8.4 7.2"/><path d="M20.2 14.6A8.5 8.5 0 0 1 6 18.6"/><path d="M4.2 15.4A8.5 8.5 0 0 1 9 4"/></svg>',
+  globe: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.6 3.6 5.4 3.6 8.5s-1.1 5.9-3.6 8.5M12 3.5C9.5 6.1 8.4 8.9 8.4 12s1.1 5.9 3.6 8.5"/></svg>',
+  moon: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 14.6A8.5 8.5 0 0 1 9.4 4a8.5 8.5 0 1 0 10.6 10.6z"/></svg>',
   sparkle: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.6 5.6 1.9-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9z"/><path d="M18.5 15l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></svg>',
 };
 
 /** Newest first. `tone` is a CSS colour variable for the icon. */
 export const NOTES = [
+  {
+    version: '1.6',
+    items: [
+      { icon: 'globe', tone: '--k-stock', title: 'Inglés y español', text: 'Elige el idioma en Ajustes → Idioma.' },
+      { icon: 'moon', tone: '--k-retire', title: 'Tema claro u oscuro', text: 'Fíjalo en Ajustes → Tema, o deja que siga a tu iPhone.' },
+      { icon: 'chart', tone: '--tint', title: 'Tu meta, debajo del rendimiento', text: 'El inicio queda más limpio: primero tus activos, luego cómo van y tu meta.' },
+    ],
+  },
   {
     version: '1.5',
     items: [

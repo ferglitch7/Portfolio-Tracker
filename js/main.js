@@ -23,6 +23,7 @@ import { startUpdates, APP_VERSION } from './update.js';
 import { showWhatsNew, showLatest } from './whatsnew.js';
 import { startPrivacy } from './privacy.js';
 import { applyTheme } from './theme.js';
+import { startI18n, LANG } from './i18n.js';
 import { startLock, lockEnabled, lockSupported, enableLock, disableLock } from './lock.js';
 import * as V from './vault.js';
 import { renderGoalCard, openGoal } from './goal.js';
@@ -1807,6 +1808,9 @@ function openSettings() {
   const numbers = segmented([['dot', '1.234,50'], ['comma', '1,234.50']], state.settings.numbers || 'dot', s => setSetting('numbers', s));
   const allocStyle = segmented([['bar', 'Barra'], ['ring', 'Anillo'], ['rows', 'Lista']], state.settings.alloc || 'bar', s => setSetting('alloc', s));
   const themeSeg = segmented([['auto', 'Auto'], ['light', 'Claro'], ['dark', 'Oscuro']], state.settings.theme || 'auto', s => setSetting('theme', s));
+  // Each language names itself; picking one reloads the app in it.
+  const langSeg = segmented([['es', 'Español'], ['en', 'English']], LANG, l => { if (l === LANG) return; setSetting('lang', l); setTimeout(() => location.reload(), 150); });
+  langSeg.el.setAttribute('data-no-i18n', '');
 
   const fileInput = h('input', { type: 'file', accept: 'application/json,.json', hidden: true, id: 'set-import' });
   fileInput.addEventListener('change', async () => {
@@ -1850,7 +1854,8 @@ function openSettings() {
         h('div.field', null, h('span.field-label', { text: 'Ordenar por valor' }), h('span.field-value'), byValue.el),
         h('div.field.numbers', null, h('span.field-label', { text: 'Números' }), h('span.field-value'), numbers.el),
         h('div.field.numbers.alloc-style', null, h('span.field-label', { text: 'Distribución' }), h('span.field-value'), allocStyle.el),
-        h('div.field.numbers.theme-pick', null, h('span.field-label', { text: 'Tema' }), h('span.field-value'), themeSeg.el)),
+        h('div.field.numbers.theme-pick', null, h('span.field-label', { text: 'Tema' }), h('span.field-value'), themeSeg.el),
+        h('div.field.numbers.lang-pick', null, h('span.field-label', { text: 'Idioma' }), h('span.field-value'), langSeg.el)),
       h('p.hint', { text: 'Para mover un activo, mantenlo pulsado y arrástralo. Al hacerlo, el orden por valor se desactiva.' }),
       h('div.group-title', { text: 'Acciones en vivo' }),
       h('div.group', null, keyField({
@@ -2017,6 +2022,7 @@ setTimeout(accrueNow, 1500);
 setInterval(accrueNow, 5 * 60e3);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(accrueNow, 1500); });
 
+startI18n();
 if (location.hash === '#demo' && !state.holdings.length) enterDemo(demoHoldings());
 sync();
 P.start();

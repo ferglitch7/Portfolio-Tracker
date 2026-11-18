@@ -2,6 +2,7 @@
 // and a projection of when the goal is reached at a chosen monthly
 // contribution and an assumed yearly return.
 
+import { DATE_LOCALE } from './i18n.js';
 import { state, setSetting, isDemo } from './store.js';
 import * as P from './prices.js';
 import * as F from './format.js';
@@ -29,7 +30,7 @@ function standing(g, totalUsd) {
 }
 
 function monthYear(d) {
-  return d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+  return d.toLocaleDateString(DATE_LOCALE, { month: 'long', year: 'numeric' });
 }
 
 function compact(v, ccy) {
@@ -166,7 +167,7 @@ export function openGoal(getValuation) {
   const marksEl = h('div.goal-marks');
 
   const nameInput = h('input.field-input', { id: 'goal-name', type: 'text', value: draft.name, autocomplete: 'off', 'aria-label': 'Nombre de la meta' });
-  const amountInput = h('input.field-input', { id: 'goal-amount', type: 'text', inputmode: 'decimal', value: F.editable(draft.amount), autocomplete: 'off', 'aria-label': 'Meta' });
+  const amountInput = h('input.field-input', { id: 'goal-amount', type: 'text', inputmode: 'decimal', value: F.editable(draft.amount), autocomplete: 'off', 'aria-label': 'Tu meta' });
   const monthlyInput = h('input.field-input', { id: 'goal-monthly', type: 'text', inputmode: 'decimal', value: draft.monthly ? F.editable(draft.monthly) : '', placeholder: '0', autocomplete: 'off', 'aria-label': 'Aporte mensual' });
   const rateLabel = h('span.field-value');
   const rateInput = h('input.goal-slider', { id: 'goal-rate', type: 'range', min: '0', max: '12', step: '0.5', value: String(draft.rate * 100), 'aria-label': 'Rentabilidad anual supuesta' });
@@ -240,7 +241,7 @@ export function openGoal(getValuation) {
       h('div.goal-need-wrap', null, needEl),
       h('div.group-title', { text: 'Hitos' }),
       marksEl,
-      h('div.group-title', { text: 'Meta' }),
+      h('div.group-title', { text: 'Tu meta' }),
       h('div.group', null, field('Nombre', nameInput), field('Cantidad', amountInput, draft.ccy)),
     ],
     foot: create ? [create] : [remove],
