@@ -40,6 +40,7 @@ test('every screen reads in English', async () => {
   const scan = async where => { for (const v of await collect(p)) if (SPANISH.test(v) && !/^(Portfolio|Road to 1M|Vanguard|Fidelity|Solana|XRP|Bitcoin|Cash|Ethereum|META$|Meta$|Costa Rican colón)/.test(v)) found.set(v, where); };
   await h.wait(3000);
   await scan('home');
+  assert.deepEqual(await p.$$eval('#prange button', e => e.map(x => x.textContent)), ['1D', '1W', '1M', '1Y', 'Real'], 'chart ranges');
   await p.$eval('#scroll', e => e.scrollTo(0, 99999)); await h.wait(400); await scan('home bottom');
   await p.$eval('#scroll', e => e.scrollTo(0, 0));
 
@@ -66,6 +67,7 @@ test('every screen reads in English', async () => {
   await close();
 
   await sheet('detail btc', () => p.tap('.row:has-text("Bitcoin") .row-main'));
+  assert.deepEqual(await p.$$eval('.sheet .seg button', e => e.map(x => x.textContent)).then(x => x.slice(0, 4)), ['1D', '1W', '1M', '1Y'], 'detail ranges');
   await p.tap('.op-add:has-text("Record a sale")'); await h.wait(900); await scan('trade sell');
   await p.tap('.sheet-view:last-child .seg button:has-text("Reward")'); await h.wait(300); await scan('trade reward');
   await p.tap('.sheet-view:last-child .back'); await h.wait(700);

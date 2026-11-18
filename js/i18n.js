@@ -239,7 +239,8 @@ export function english(s) {
 
 // ---- applying it --------------------------------------------------------------------
 
-const LETTERS = /[A-Za-zÁÉÍÓÚÑáéíóúñ¿¡]{2}/;
+// Any letter at all: "1S" and "1A" (the chart ranges) have only one.
+const LETTERS = /[A-Za-zÁÉÍÓÚÑáéíóúñ¿¡]/;
 const ATTRS = ['aria-label', 'placeholder', 'title'];
 
 function swapText(node) {
