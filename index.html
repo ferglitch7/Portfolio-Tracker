@@ -7,6 +7,16 @@
 <meta name="description" content="Tu portfolio en vivo: crypto, acciones, metales y efectivo.">
 <meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<script>
+  // The theme chosen in Ajustes, before anything is painted (no flash).
+  try {
+    var t = (JSON.parse(localStorage.getItem('portfolio.v1') || '{}').settings || {}).theme;
+    if (t === 'light' || t === 'dark') {
+      document.documentElement.dataset.theme = t;
+      document.querySelectorAll('meta[name="theme-color"]').forEach(function (m) { m.content = t === 'dark' ? '#000000' : '#f2f2f7'; });
+    }
+  } catch (e) {}
+</script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -122,16 +132,9 @@
           </div>
         </section>
 
-        <button class="goal-card" id="goal" type="button" hidden></button>
-
         <div class="notice" id="notice" hidden></div>
 
         <section class="card list" id="list" aria-label="Activos"></section>
-
-        <section class="watch" id="watch" hidden aria-label="Seguimiento">
-          <h2 class="section-title">Seguimiento</h2>
-          <div class="card list" id="watch-list"></div>
-        </section>
 
         <section class="perf" id="perf" hidden aria-label="Rendimiento">
           <h2 class="section-title">Rendimiento</h2>
@@ -140,6 +143,13 @@
             <p class="perf-line" id="perf-line"></p>
             <p class="perf-line perf-income" id="perf-income" hidden></p>
           </div>
+        </section>
+
+        <button class="goal-card" id="goal" type="button" hidden></button>
+
+        <section class="watch" id="watch" hidden aria-label="Seguimiento">
+          <h2 class="section-title">Seguimiento</h2>
+          <div class="card list" id="watch-list"></div>
         </section>
 
         <section class="empty" id="empty" hidden>

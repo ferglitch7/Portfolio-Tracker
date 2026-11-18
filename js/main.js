@@ -22,6 +22,7 @@ import { loadStats } from './stats.js';
 import { startUpdates, APP_VERSION } from './update.js';
 import { showWhatsNew, showLatest } from './whatsnew.js';
 import { startPrivacy } from './privacy.js';
+import { applyTheme } from './theme.js';
 import { startLock, lockEnabled, lockSupported, enableLock, disableLock } from './lock.js';
 import * as V from './vault.js';
 import { renderGoalCard, openGoal } from './goal.js';
@@ -1805,6 +1806,7 @@ function openSettings() {
   const byValue = toggle(!state.settings.order, on => { if (on) setSetting('order', null); else byValue.set(true); }, 'Ordenar activos por valor');
   const numbers = segmented([['dot', '1.234,50'], ['comma', '1,234.50']], state.settings.numbers || 'dot', s => setSetting('numbers', s));
   const allocStyle = segmented([['bar', 'Barra'], ['ring', 'Anillo'], ['rows', 'Lista']], state.settings.alloc || 'bar', s => setSetting('alloc', s));
+  const themeSeg = segmented([['auto', 'Auto'], ['light', 'Claro'], ['dark', 'Oscuro']], state.settings.theme || 'auto', s => setSetting('theme', s));
 
   const fileInput = h('input', { type: 'file', accept: 'application/json,.json', hidden: true, id: 'set-import' });
   fileInput.addEventListener('change', async () => {
@@ -1847,7 +1849,8 @@ function openSettings() {
         lockRow,
         h('div.field', null, h('span.field-label', { text: 'Ordenar por valor' }), h('span.field-value'), byValue.el),
         h('div.field.numbers', null, h('span.field-label', { text: 'Números' }), h('span.field-value'), numbers.el),
-        h('div.field.numbers.alloc-style', null, h('span.field-label', { text: 'Distribución' }), h('span.field-value'), allocStyle.el)),
+        h('div.field.numbers.alloc-style', null, h('span.field-label', { text: 'Distribución' }), h('span.field-value'), allocStyle.el),
+        h('div.field.numbers.theme-pick', null, h('span.field-label', { text: 'Tema' }), h('span.field-value'), themeSeg.el)),
       h('p.hint', { text: 'Para mover un activo, mantenlo pulsado y arrástralo. Al hacerlo, el orden por valor se desactiva.' }),
       h('div.group-title', { text: 'Acciones en vivo' }),
       h('div.group', null, keyField({
@@ -1907,6 +1910,7 @@ function demoHoldings() {
 // ============================================================================
 
 function sync() {
+  applyTheme(state.settings.theme);
   F.setNumberStyle(state.settings.numbers);
   P.setFinnhubKey(state.settings.finnhubKey);
   H.setHistoryKey(state.settings.historyKey);
