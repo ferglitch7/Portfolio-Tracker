@@ -39,8 +39,11 @@ En español o inglés (Ajustes → Idioma). La app está escrita en español y
 diccionario de frases y patrones para las que llevan números o nombres. Un
 texto nuevo necesita su entrada en ese diccionario; la prueba
 `tests/e2e/english.e2e.cjs` recorre la app en inglés y lista cualquier texto que
-siga en español. El tema (Ajustes → Tema) sigue al iPhone o se fija en claro u
-oscuro.
+siga en español. El tema (Ajustes → Tema) sigue al iPhone o se fija en claro, oscuro o
+azul (vidrio y luz azul).
+
+**Diseño anterior al tema Azul:** el commit `f3774b3` (versión 1.7). El tema
+Azul es una opción más; Auto, Claro y Oscuro quedan como estaban.
 
 ## Publicar un cambio
 

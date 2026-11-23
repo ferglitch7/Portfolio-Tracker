@@ -1,7 +1,7 @@
 // Offline shell: the app's own files are cached so it opens without a
 // connection (showing the last known prices). Price and logo requests to other
 // hosts are never touched.
-const CACHE = 'portfolio-v31';
+const CACHE = 'portfolio-v32';
 const SHELL = [
   './', 'index.html', 'styles.css', 'manifest.webmanifest',
   'js/main.js', 'js/store.js', 'js/prices.js', 'js/format.js', 'js/catalog.js', 'js/catalog-data.js',

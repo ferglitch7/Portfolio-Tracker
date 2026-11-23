@@ -119,7 +119,7 @@ const EN = new Map(Object.entries({
   'Toca otra vez para restaurar': 'Tap again to restore', 'Antes de restaurar': 'Before restoring', 'Versión restaurada': 'Version restored',
   'Antes de importar': 'Before importing', 'Antes de borrar': 'Before wiping', 'Ocultar importes': 'Hide amounts',
   'Ordenar activos por valor': 'Sort assets by value', 'Ordenar por valor': 'Sort by value',
-  'Barra': 'Bar', 'Anillo': 'Ring', 'Lista': 'List', 'Auto': 'Auto', 'Claro': 'Light', 'Oscuro': 'Dark', 'Tema': 'Theme', 'Idioma': 'Language',
+  'Barra': 'Bar', 'Anillo': 'Ring', 'Lista': 'List', 'Auto': 'Auto', 'Claro': 'Light', 'Oscuro': 'Dark', 'Azul': 'Blue', 'Tema': 'Theme', 'Idioma': 'Language',
   'Portfolio importado': 'Portfolio imported', 'Ese archivo no es una copia de Portfolio': 'That file is not a Portfolio copy',
   'Nunca': 'Never', 'Borrar todo': 'Delete everything', 'Portfolio borrado': 'Portfolio deleted', 'Ver versiones': 'See versions',
   'Toca otra vez para borrar': 'Tap again to delete', 'Números': 'Numbers',
@@ -155,6 +155,7 @@ const EN = new Map(Object.entries({
   'Fíjalo en Ajustes → Tema, o deja que siga a tu iPhone.': 'Set it in Settings → Theme, or let it follow your iPhone.',
   'Tu meta, debajo del rendimiento': 'Your goal, below performance', 'El inicio queda más limpio: primero tus activos, luego cómo van y tu meta.': 'A cleaner home: your assets first, then how they are doing and your goal.',
   'Bloqueo de Portfolio': 'Portfolio lock',
+  'Tema Azul': 'Blue theme', 'Luz azul de fondo y tarjetas de vidrio. Actívalo en Ajustes → Tema → Azul.': 'Blue light behind and glass cards. Turn it on in Settings → Theme → Blue.',
   'Tu portfolio en vivo: crypto, acciones, metales y efectivo.': 'Your portfolio, live: crypto, stocks, metals and cash.',
   'del token PAXG': 'the PAXG token',
 }));

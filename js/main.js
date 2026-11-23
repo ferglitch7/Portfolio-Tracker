@@ -1807,7 +1807,7 @@ function openSettings() {
   const byValue = toggle(!state.settings.order, on => { if (on) setSetting('order', null); else byValue.set(true); }, 'Ordenar activos por valor');
   const numbers = segmented([['dot', '1.234,50'], ['comma', '1,234.50']], state.settings.numbers || 'dot', s => setSetting('numbers', s));
   const allocStyle = segmented([['bar', 'Barra'], ['ring', 'Anillo'], ['rows', 'Lista']], state.settings.alloc || 'bar', s => setSetting('alloc', s));
-  const themeSeg = segmented([['auto', 'Auto'], ['light', 'Claro'], ['dark', 'Oscuro']], state.settings.theme || 'auto', s => setSetting('theme', s));
+  const themeSeg = segmented([['auto', 'Auto'], ['light', 'Claro'], ['dark', 'Oscuro'], ['blue', 'Azul']], state.settings.theme || 'auto', s => setSetting('theme', s));
   // Each language names itself; picking one reloads the app in it.
   const langSeg = segmented([['es', 'Español'], ['en', 'English']], LANG, l => { if (l === LANG) return; setSetting('lang', l); setTimeout(() => location.reload(), 150); });
   langSeg.el.setAttribute('data-no-i18n', '');

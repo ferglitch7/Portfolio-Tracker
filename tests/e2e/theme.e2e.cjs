@@ -24,6 +24,11 @@ test('force light on a dark iPhone and back; kept after reload, applied before p
   await p.reload(); await h.wait(200);
   assert.equal(await p.evaluate(() => document.documentElement.dataset.theme), 'light', 'set before the app starts');
   await h.wait(2000);
+  await choose('Azul');
+  assert.equal(await bg(), '#050a24');
+  assert.equal(await p.evaluate(() => document.documentElement.dataset.theme), 'blue');
+  assert.match(await p.$eval('#page', e => getComputedStyle(e).backgroundImage), /radial-gradient/, 'blue light behind');
+  assert.equal(await p.$eval('meta[name="theme-color"]', m => m.content), '#050a24');
   await choose('Auto');
   assert.equal(await bg(), '#000000');
   assert.equal(await p.evaluate(() => document.documentElement.dataset.theme || ''), '');

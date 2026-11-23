@@ -27,6 +27,12 @@ const ICON = {
 /** Newest first. `tone` is a CSS colour variable for the icon. */
 export const NOTES = [
   {
+    version: '1.8',
+    items: [
+      { icon: 'sparkle', tone: '--k-stock', title: 'Tema Azul', text: 'Luz azul de fondo y tarjetas de vidrio. Actívalo en Ajustes → Tema → Azul.' },
+    ],
+  },
+  {
     version: '1.6',
     items: [
       { icon: 'globe', tone: '--k-stock', title: 'Inglés y español', text: 'Elige el idioma en Ajustes → Idioma.' },
