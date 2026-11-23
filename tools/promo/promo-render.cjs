@@ -77,8 +77,8 @@ const html = `<!DOCTYPE html><html><head><style>
     const drift = Math.sin(Math.max(0, t - 4.2) * 0.9) * span(t, 4.2, 5.4);
     const out = span(t, 7.6, 8.6);                 // back towards flat at the end
     const k = iso * (1 - out * 0.85);
-    const rx = lerp(8, 56, k), rz = lerp(0, -40, k) + drift * 4, sc = lerp(1.22, 1.1, k) * lerp(0.92, 1, span(t, 0, 0.9));
-    const ty = lerp(330, 250, k);
+    const rx = lerp(8, 56, k), rz = lerp(0, -40, k) + drift * 4, sc = lerp(1.22, 1.1, iso) * lerp(0.92, 1, span(t, 0, 0.9)) * (1 - 0.16 * out);
+    const ty = lerp(330, 250, iso) - 170 * out;
     phone.style.transform = 'translate3d(0,' + ty + 'px,0) scale(' + sc + ') rotateX(' + rx + 'deg) rotateZ(' + rz + 'deg)';
     phone.style.opacity = span(t, 0, 0.7);
     els.forEach((e, i) => {

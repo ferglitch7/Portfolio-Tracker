@@ -51,3 +51,8 @@ Lee esto antes de tocar nada. Resume lo que se decidió en sesiones anteriores.
 - `promo/`: video 3D promocional (vertical 1080×1920) y su imagen fija, con un
   portfolio de ejemplo. `tools/promo/`: scripts que los generan (capturas en
   tema Azul + render cuadro a cuadro con Playwright y ffmpeg).
+- Figma: archivo «Portfolio — 3D y Motion» (https://www.figma.com/design/7j6ZlWuoIjD5OxYh71QqyG)
+  con la pantalla de inicio Azul en capas editables (componente «Fila de activo»)
+  y una «Escena 3D» animada con Motion. Hallazgo (11/2026): el lienzo muestra el
+  3D, pero `export_video` de Figma lo exporta plano. `promo/figma/` tiene la
+  comparación cuadro a cuadro y una captura del lienzo 3D.
