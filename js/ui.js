@@ -97,7 +97,7 @@ export function toggle(on, onChange, label) {
   return { el, set };
 }
 
-const SPARK_W = 56, SPARK_H = 24, SPARK_N = 28;
+const SPARK_W = 44, SPARK_H = 24, SPARK_N = 24;
 
 export function sparkEl() {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');

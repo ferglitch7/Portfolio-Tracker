@@ -272,7 +272,7 @@ svg { display: block; }
 }
 .row-main:active { background: color-mix(in srgb, var(--card) 88%, var(--label) 12%); }
 .row-mid { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-.spark { flex: none; width: 56px; height: 24px; overflow: visible; opacity: 0; transition: opacity 0.5s; }
+.spark { flex: none; width: 44px; height: 24px; overflow: visible; opacity: 0; transition: opacity 0.5s; }
 .spark.on { opacity: 1; }
 .spark path { stroke: var(--up); stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
 .spark.down path { stroke: var(--down); }
@@ -957,3 +957,7 @@ html.locked #app { visibility: hidden; }
 :root[data-theme="blue"] .coin .coin-bg { fill: var(--coin-d); fill-opacity: 0.24; }
 :root[data-theme="blue"] .coin .coin-sym { fill: var(--coin-d); }
 .theme-pick .seg { width: 236px; }
+
+/* Subtle 3D lean on press (js/tilt.js) */
+.tilt { transition: transform 0.55s var(--ease-spring); will-change: transform; transform-origin: 50% 50%; }
+.tilt.pressing { transition: transform 0.14s ease-out; }

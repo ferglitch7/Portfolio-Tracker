@@ -23,6 +23,7 @@ import { startUpdates, APP_VERSION } from './update.js';
 import { showWhatsNew, showLatest } from './whatsnew.js';
 import { startPrivacy } from './privacy.js';
 import { applyTheme } from './theme.js';
+import { tilt } from './tilt.js';
 import { startI18n, LANG } from './i18n.js';
 import { startLock, lockEnabled, lockSupported, enableLock, disableLock } from './lock.js';
 import * as V from './vault.js';
@@ -101,6 +102,10 @@ function qtyLabel(a) {
   if (a.kind === 'retire') return `${a.accType || 'Retiro'} · ${a.track ? trackName(a.track) : 'saldo fijo'}`;
   return `${F.qty(a.qty)} ${a.sym}`;
 }
+
+// Assets whose value is quantity × market price (the list spells that out).
+const priced = a => (a.kind === 'crypto' || a.kind === 'stock' || a.kind === 'metal') && a.qty > 0;
+const perUnit = a => (a.kind === 'metal' && UNITS[a.unit] ? UNITS[a.unit].perOz : 1);
 
 function trackName(sym) { return (TRACKS.find(t => t[0] === sym) || [null, sym])[1]; }
 
@@ -761,7 +766,11 @@ function renderList(v) {
     const isNew = !row;
     if (isNew) { row = createRow(a); rowMap.set(a.id, row); }
     row.name.textContent = a.name;
-    row.sub.textContent = qtyLabel(a);
+    // "0,42 BTC × $100.000": the sum is spelled out, so the big amount on the
+    // right reads as what you hold, not as the asset's price.
+    const unitPrice = priced(a) && r.q ? r.q.p * v.rate / perUnit(a) : null;
+    // Prices of 1.000 or more without cents, so the line fits beside the trend.
+    row.sub.textContent = unitPrice != null ? `${qtyLabel(a)} × ${unitPrice >= 1000 ? F.wholeMoney(unitPrice, ccy()) : F.price(unitPrice, ccy())}` : qtyLabel(a);
     row.val.textContent = r.value != null ? F.money(r.value, ccy()) : '—';
     longest = Math.max(longest, row.val.textContent.length);
 
@@ -773,6 +782,7 @@ function renderList(v) {
     } else {
       row.chg.className = 'row-chg';
       if (a.kind === 'custom' || a.kind === 'retire' || (a.kind === 'cash' && a.sym === ccy())) row.chg.textContent = '';
+      else if (unitPrice != null) row.chg.textContent = ''; // the price is already on the left
       else row.chg.textContent = r.q ? F.price(r.q.p * v.rate, ccy()) : a.kind === 'stock' ? 'Sin precio' : 'Cargando';
     }
 
@@ -2023,6 +2033,8 @@ setInterval(accrueNow, 5 * 60e3);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(accrueNow, 1500); });
 
 startI18n();
+// The cards of the home screen lean a little towards the finger when pressed.
+[$('goal'), document.querySelector('.perf-card'), $('alloc-ringcard'), $('alloc-rows')].forEach(tilt);
 if (location.hash === '#demo' && !state.holdings.length) enterDemo(demoHoldings());
 sync();
 P.start();

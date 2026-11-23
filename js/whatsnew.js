@@ -27,6 +27,13 @@ const ICON = {
 /** Newest first. `tone` is a CSS colour variable for the icon. */
 export const NOTES = [
   {
+    version: '1.9',
+    items: [
+      { icon: 'list', tone: '--tint', title: 'Cada activo, con su cuenta', text: 'Debajo del nombre ves cantidad × precio, y a la derecha lo que vale lo tuyo.' },
+      { icon: 'sparkle', tone: '--k-stock', title: 'Tarjetas con profundidad', text: 'Al tocar la meta, el rendimiento o la distribución, la tarjeta se inclina hacia tu dedo.' },
+    ],
+  },
+  {
     version: '1.8',
     items: [
       { icon: 'sparkle', tone: '--k-stock', title: 'Tema Azul', text: 'Luz azul de fondo y tarjetas de vidrio. Actívalo en Ajustes → Tema → Azul.' },

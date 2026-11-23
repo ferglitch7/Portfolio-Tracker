@@ -155,6 +155,8 @@ const EN = new Map(Object.entries({
   'Fíjalo en Ajustes → Tema, o deja que siga a tu iPhone.': 'Set it in Settings → Theme, or let it follow your iPhone.',
   'Tu meta, debajo del rendimiento': 'Your goal, below performance', 'El inicio queda más limpio: primero tus activos, luego cómo van y tu meta.': 'A cleaner home: your assets first, then how they are doing and your goal.',
   'Bloqueo de Portfolio': 'Portfolio lock',
+  'Cada activo, con su cuenta': 'Every asset, with its sum', 'Debajo del nombre ves cantidad × precio, y a la derecha lo que vale lo tuyo.': 'Under the name you see quantity × price, and on the right what yours is worth.',
+  'Tarjetas con profundidad': 'Cards with depth', 'Al tocar la meta, el rendimiento o la distribución, la tarjeta se inclina hacia tu dedo.': 'When you press the goal, performance or allocation, the card leans towards your finger.',
   'Tema Azul': 'Blue theme', 'Luz azul de fondo y tarjetas de vidrio. Actívalo en Ajustes → Tema → Azul.': 'Blue light behind and glass cards. Turn it on in Settings → Theme → Blue.',
   'Tu portfolio en vivo: crypto, acciones, metales y efectivo.': 'Your portfolio, live: crypto, stocks, metals and cash.',
   'del token PAXG': 'the PAXG token',
