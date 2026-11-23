@@ -766,25 +766,27 @@ function renderList(v) {
     const isNew = !row;
     if (isNew) { row = createRow(a); rowMap.set(a.id, row); }
     row.name.textContent = a.name;
-    // "0,42 BTC × $100.000": the sum is spelled out, so the big amount on the
-    // right reads as what you hold, not as the asset's price.
-    const unitPrice = priced(a) && r.q ? r.q.p * v.rate / perUnit(a) : null;
-    // Prices of 1.000 or more without cents, so the line fits beside the trend.
-    row.sub.textContent = unitPrice != null ? `${qtyLabel(a)} × ${unitPrice >= 1000 ? F.wholeMoney(unitPrice, ccy()) : F.price(unitPrice, ccy())}` : qtyLabel(a);
-    row.val.textContent = r.value != null ? F.money(r.value, ccy()) : '—';
-    longest = Math.max(longest, row.val.textContent.length);
-
-    // Second line on the right: change (today or vs cost), else the unit price.
+    // Two columns, two meanings (as Delta and CoinStats lay out holdings):
+    //   left  = the asset: its price and how that price moved
+    //   right = yours: what you hold is worth, and how much of it you hold
     const ratio = pillMode === 'total' ? r.gainPct : r.dayPct;
-    if (ratio != null) {
-      row.chg.textContent = F.pct(ratio);
-      row.chg.className = 'row-chg ' + (ratio > 0.00005 ? 'up' : ratio < -0.00005 ? 'down' : '');
+    const tone = ratio == null ? '' : ratio > 0.00005 ? 'up' : ratio < -0.00005 ? 'down' : '';
+    const unitPrice = priced(a) && r.q ? r.q.p * v.rate / perUnit(a) : null;
+    row.val.textContent = r.value != null ? F.money(r.value, ccy()) : '—';
+    if (unitPrice != null) {
+      const pct = ratio != null ? h('span.row-pct' + (tone ? '.' + tone : ''), { text: F.pct(ratio) }) : null;
+      // Prices of 1.000 or more without cents, so price and change fit beside the trend.
+      row.sub.replaceChildren(unitPrice >= 1000 ? F.wholeMoney(unitPrice, ccy()) : F.price(unitPrice, ccy()), ...(pct ? [pct] : []));
+      row.chg.textContent = qtyLabel(a);
+      row.chg.className = 'row-chg qty';
     } else {
-      row.chg.className = 'row-chg';
-      if (a.kind === 'custom' || a.kind === 'retire' || (a.kind === 'cash' && a.sym === ccy())) row.chg.textContent = '';
-      else if (unitPrice != null) row.chg.textContent = ''; // the price is already on the left
+      row.sub.textContent = qtyLabel(a);
+      row.chg.className = 'row-chg ' + tone;
+      if (ratio != null) row.chg.textContent = F.pct(ratio);
+      else if (a.kind === 'custom' || a.kind === 'retire' || (a.kind === 'cash' && a.sym === ccy())) row.chg.textContent = '';
       else row.chg.textContent = r.q ? F.price(r.q.p * v.rate, ccy()) : a.kind === 'stock' ? 'Sin precio' : 'Cargando';
     }
+    longest = Math.max(longest, row.val.textContent.length);
 
     // The last 24 hours, the same period as the % beside it, and in its colour.
     // Redrawn only when its data or that direction changes.

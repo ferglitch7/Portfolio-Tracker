@@ -114,7 +114,7 @@ test('trend lines line up in one column whatever the amount width', async () => 
 test('trend lines cover the last 24 h and take the colour of today\'s change', async () => {
   const h = await phone(env, { seed });
   await h.wait(3500);
-  const tone = name => h.p.$eval(`.row:has-text("${name}")`, r => [r.querySelector('.spark').classList.contains('down') ? 'down' : 'up', r.querySelector('.row-chg').className.includes('down') ? 'down' : 'up']);
+  const tone = name => h.p.$eval(`.row:has-text("${name}")`, r => [r.querySelector('.spark').classList.contains('down') ? 'down' : 'up', (r.querySelector('.row-pct') || r.querySelector('.row-chg')).className.includes('down') ? 'down' : 'up']);
   // the fake ETH history rises over the week, but today it is down: the line must be red
   for (const n of ['Bitcoin', 'Ethereum']) { const [s, c] = await tone(n); assert.equal(s, c, `${n}: line ${s}, change ${c}`); }
   assert.deepEqual(await tone('Ethereum'), ['down', 'down']);

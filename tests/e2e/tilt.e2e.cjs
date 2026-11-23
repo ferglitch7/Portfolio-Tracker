@@ -7,15 +7,19 @@ let env;
 test.before(async () => { env = await start(); });
 test.after(() => env.close());
 
-test('asset rows read "quantity × price", so the amount on the right is your value', async () => {
+test('asset rows: the asset on the left (price, change), yours on the right (value, quantity)', async () => {
   const h = await phone(env, { seed: { holdings: [BTC, { ...GOLD, unit: 'g' }, CASH], settings: {} } });
   const { p } = h;
   await h.wait(2500);
-  const sub = name => p.$eval(`.row:has-text("${name}") .row-sub`, e => e.textContent);
-  assert.equal(await sub('Bitcoin'), '1 BTC × $100.000');
-  assert.match(await sub('Oro'), /^311,03\d* g × \$128,6\d$/, 'gold in grams shows the price per gram');
-  assert.equal(await sub('Cash'), '10.000 USD', 'cash has no price to multiply');
-  assert.equal(await p.$eval('.row:has-text("Bitcoin") .row-val', e => e.textContent), '$100.000,00');
+  const cell = (name, sel) => p.$eval(`.row:has-text("${name}") ${sel}`, e => e.textContent);
+  assert.equal(await cell('Bitcoin', '.row-sub'), '$100.000+2,04%', 'price and today on the left');
+  assert.equal(await cell('Bitcoin', '.row-pct'), '+2,04%');
+  assert.equal(await cell('Bitcoin', '.row-val'), '$100.000,00', 'your value on the right');
+  assert.equal(await cell('Bitcoin', '.row-chg'), '1 BTC', 'your quantity under it');
+  assert.match(await cell('Oro', '.row-sub'), /^\$128,6\d/, 'gold in grams shows the price per gram');
+  assert.match(await cell('Oro', '.row-chg'), /^311,03\d* g$/);
+  assert.equal(await cell('Cash', '.row-sub'), '10.000 USD', 'cash keeps its balance on the left');
+  assert.doesNotMatch(await p.textContent('#list'), /×/);
   await h.close();
 });
 

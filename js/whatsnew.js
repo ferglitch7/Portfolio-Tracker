@@ -27,9 +27,14 @@ const ICON = {
 /** Newest first. `tone` is a CSS colour variable for the icon. */
 export const NOTES = [
   {
+    version: '2.0',
+    items: [
+      { icon: 'list', tone: '--tint', title: 'Activos más claros', text: 'A la izquierda, el precio y su cambio de hoy. A la derecha, lo que vale lo tuyo y cuánto tienes.' },
+    ],
+  },
+  {
     version: '1.9',
     items: [
-      { icon: 'list', tone: '--tint', title: 'Cada activo, con su cuenta', text: 'Debajo del nombre ves cantidad × precio, y a la derecha lo que vale lo tuyo.' },
       { icon: 'sparkle', tone: '--k-stock', title: 'Tarjetas con profundidad', text: 'Al tocar la meta, el rendimiento o la distribución, la tarjeta se inclina hacia tu dedo.' },
     ],
   },

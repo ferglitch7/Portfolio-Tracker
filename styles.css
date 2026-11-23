@@ -272,7 +272,7 @@ svg { display: block; }
 }
 .row-main:active { background: color-mix(in srgb, var(--card) 88%, var(--label) 12%); }
 .row-mid { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-.spark { flex: none; width: 44px; height: 24px; overflow: visible; opacity: 0; transition: opacity 0.5s; }
+.spark { flex: none; width: 52px; height: 24px; overflow: visible; opacity: 0; transition: opacity 0.5s; }
 .spark.on { opacity: 1; }
 .spark path { stroke: var(--up); stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
 .spark.down path { stroke: var(--down); }
@@ -284,6 +284,9 @@ svg { display: block; }
 .row-chg { font-size: 12px; font-weight: 500; color: var(--label-2); font-variant-numeric: tabular-nums; }
 .row-chg.up { color: var(--up); }
 .row-chg.down { color: var(--down); }
+.row-pct { margin-left: 6px; font-weight: 500; }
+.row-pct.up { color: var(--up); }
+.row-pct.down { color: var(--down); }
 
 .row-actions { position: absolute; top: 0; right: 0; bottom: 0; display: flex; visibility: hidden; }
 .row.swiped .row-actions { visibility: visible; }
