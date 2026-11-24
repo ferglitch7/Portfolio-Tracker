@@ -11,9 +11,10 @@
   // The theme chosen in Ajustes, before anything is painted (no flash).
   try {
     var t = (JSON.parse(localStorage.getItem('portfolio.v1') || '{}').settings || {}).theme;
-    if (t === 'light' || t === 'dark' || t === 'blue') {
+    var BAR = { dark: '#000000', light: '#f2f2f7', blue: '#050a24', gold: '#f6f2ea', 'gold-dark': '#0c0a06' };
+    if (BAR[t]) {
       document.documentElement.dataset.theme = t;
-      document.querySelectorAll('meta[name="theme-color"]').forEach(function (m) { m.content = { dark: '#000000', light: '#f2f2f7', blue: '#050a24' }[t]; });
+      document.querySelectorAll('meta[name="theme-color"]').forEach(function (m) { m.content = BAR[t]; });
     }
   } catch (e) {}
 </script>
