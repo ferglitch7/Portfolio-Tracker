@@ -69,7 +69,7 @@ function monogram(asset) {
   const hu = hue(asset.name || asset.sym || 'x');
   return h('span.logo-mono', {
     text: label,
-    style: { background: `linear-gradient(145deg, hsl(${hu} 62% 58%), hsl(${(hu + 28) % 360} 60% 42%))`, fontSize: label.length > 2 ? '0.3em' : '0.38em' },
+    style: { background: `linear-gradient(145deg, hsl(${hu} 50% 45%), hsl(${(hu + 28) % 360} 48% 32%))`, fontSize: label.length > 2 ? '0.3em' : '0.38em' },
   });
 }
 
