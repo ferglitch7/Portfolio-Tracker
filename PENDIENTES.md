@@ -21,6 +21,26 @@ rendimiento ni la meta.
   se quiere el patrimonio neto (activos − deudas), se monta encima.
 - Esfuerzo: ~45 min–1 h. Modelo: Sonnet, effort medio.
 
+## Tema «Verde» inspirado en un dashboard (referencia del dueño)
+
+**Pedido (11/24/2026):** «Algo así quiero crear luego». Referencia guardada en
+`docs/referencias/verdelo-dashboard.png` (dashboard «Verdelo», de un reel de
+@_code_and_chill_).
+
+Lo que define ese estilo:
+- Fondo casi negro con un **verde bosque** muy oscuro; tarjetas de vidrio
+  verdoso con borde fino y luz suave arriba.
+- **Una sola familia de color**: todo en verdes, del menta brillante (acento:
+  botones, selección, barras activas) al verde grisáceo (texto secundario).
+- Acentos escasos: solo lo importante brilla (botón principal, pestaña activa,
+  barras del gráfico).
+- Tipografía fina y limpia, cifras grandes en blanco.
+
+Cómo se haría aquí: un **quinto tema «Verde»** (como el Azul) y, dentro de él,
+la barra de distribución en **tonos de verde** (del menta al verde oscuro), que
+también responde a lo que el dueño pidió para la barra: ni grises ni chillones.
+Esfuerzo: ~1,5–2 h · Opus, effort medio.
+
 ## Otras ideas propuestas (sin decidir)
 
 - **Comisiones en compras y ventas** (campo opcional): costo promedio y ganancia
